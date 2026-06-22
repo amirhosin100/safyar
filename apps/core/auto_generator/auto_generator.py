@@ -169,12 +169,11 @@ def pregenerate_all():
     for app_config in apps.get_app_configs():
         if app_config.label in settings.EXCLUDE_APPS:
             continue
-        print(app_config.label)
         for model in app_config.get_models():
             if model._meta.abstract or model._meta.proxy:
                 continue
             save_serializers_from_file(model)
             save_viewsets_from_file(model)
-            for serializer_type in ["full", "simple", "export"]:
+            for serializer_type in ["full", "simple"]:
                 get_or_create_serializer(model, serializer_type)
             get_or_create_viewset(model)
