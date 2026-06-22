@@ -1,0 +1,20 @@
+services:
+  postgres:
+    container_name: postgres_safyar
+    image: postgres:18
+    env_file:
+      - ../.env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - safyar_postgres_data_dev:/var/lib/postgresql/18/docker
+    restart: always
+    ports:
+      - "5432:5432"
+
+
+volumes:
+  safyar_postgres_data_dev:
+
