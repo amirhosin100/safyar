@@ -1,10 +1,8 @@
 
-from django.db.models import ForeignKey, OneToOneField, ProtectedError
+from django.db.models import ForeignKey, OneToOneField
 from django.utils import translation
-from django.utils.translation import gettext_lazy as _
-from rest_framework import status
+
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import DjangoModelPermissions, IsAuthenticated
 from rest_framework.relations import ManyRelatedField, PrimaryKeyRelatedField
@@ -18,6 +16,7 @@ from apps.core.utils.filters import (
 )
 from apps.core.utils.form_schema import build_form_schema
 from apps.core.utils.pagination import OptionalPageNumberPagination
+from apps.core.utils.i18n_request import negotiate_request_lang
 
 
 class BaseAPIView(GenericAPIView):
