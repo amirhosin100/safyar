@@ -1,0 +1,40 @@
+services:
+  postgres:
+    container_name: postgres_safyar
+    image: postgres:18
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - safyar_postgres_data:/var/lib/postgresql/18/docker
+    restart: always
+    ports:
+      - "${POSTGRES_EXTERNAL_PORT}:5432"
+    networks:
+      - safyar_network
+
+  backend:
+    container_name: backend_safyar
+    build: .
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ".:/src"
+    restart: always
+    networks:
+      safyar_network:
+    depends_on:
+      - postgres
+
+
+volumes:
+  safyar_postgres_data:
+
+networks:
+  safyar_network:
