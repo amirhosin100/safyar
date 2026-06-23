@@ -34,8 +34,10 @@ INSTALLED_APPS = [
     "apps.core",
     "apps.account",
     "apps.owner",
+    "apps.smoothing",
     # other packages
-    "rest_framework"
+    "rest_framework",
+    "rest_framework_simplejwt",
 ]
 
 MIDDLEWARE = [

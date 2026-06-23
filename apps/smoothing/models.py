@@ -1,0 +1,89 @@
+from apps.core.models import BaseModel
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+from apps.smoothing.choices import ClosedDayChoices, OrderChoices, JobTypeChoices
+
+
+class Smoothing(BaseModel):
+    user = models.ForeignKey(
+        "account.User",
+        on_delete=models.CASCADE,
+        related_name="branches",
+        verbose_name=_("User"),
+    )
+    logo = models.ImageField(
+        verbose_name=_("Logo"),
+    )
+    name = models.CharField(
+        max_length=255,
+        verbose_name=_("Branch Name"),
+    )
+    owner_name = models.CharField(
+        max_length=255,
+        verbose_name=_("Owner Name"),
+    )
+    landline_number = models.CharField(
+        max_length=20,
+        verbose_name=_("Landline Number"),
+    )
+    phone_number = models.CharField(
+        max_length=20,
+        verbose_name=_("Phone Number"),
+    )
+    city = models.CharField(
+        max_length=20,
+        verbose_name=_("City"),
+    )
+    address = models.TextField(verbose_name=_("Address"))
+
+
+class Branch(BaseModel):
+    smoothing = models.ForeignKey(
+        Smoothing,
+        on_delete=models.PROTECT,
+        related_name="branches",
+    )
+    closed_days = models.CharField(
+        max_length=10,
+        verbose_name=_("Closed Days"),
+        choices=ClosedDayChoices.choices,
+        default=ClosedDayChoices.NO_DAYS_OFF,
+    )
+    open_time = models.TimeField(verbose_name=_("Open time"))
+    closed_time = models.TimeField(verbose_name=_("Closed time"))
+    order = models.PositiveSmallIntegerField(
+        verbose_name=_("Order"),
+        choices=OrderChoices.choices,
+    )
+
+    first_follow_up_code = models.PositiveBigIntegerField(verbose_name=_("First Follow Up Code"))
+    next_follow_up_code = models.PositiveBigIntegerField(verbose_name=_("Next Follow Up Code"))
+
+    class Meta:
+        verbose_name = _("Branch")
+        verbose_name_plural = _("Branches")
+
+    def __str__(self):
+        return f"{self.user.full_name} - {self.name}"
+
+
+class Colleague(BaseModel):
+    branch = models.ForeignKey(
+        Branch,
+        on_delete=models.PROTECT,
+        related_name="colleagues",
+        verbose_name=_("Branch"),
+    )
+    name = models.CharField(
+        max_length=255,
+        verbose_name=_("Name"),
+    )
+    phone_number = models.CharField(
+        max_length=11,
+        verbose_name=_("Phone Number"),
+    )
+    job_type = models.CharField(
+        max_length=20,
+        verbose_name=_("Job Type"),
+        choices=JobTypeChoices.choices
+    )
