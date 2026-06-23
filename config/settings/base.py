@@ -1,5 +1,7 @@
 from pathlib import Path
 import os
+
+from django.conf.global_settings import AUTH_USER_MODEL
 from dotenv import load_dotenv
 from datetime import timedelta
 
@@ -123,6 +125,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+AUTH_USER_MODEL = "account.User"
 
 EXCLUDE_MODELS = {"LogEntity", "Session", "Group", "Token", "ContentType", "Migration"}
 EXCLUDE_APPS = {
