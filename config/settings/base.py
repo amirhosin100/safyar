@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "apps.account",
     "apps.owner",
     "apps.smoothing",
+    "apps.wallet",
     # other packages
     "rest_framework",
     "rest_framework_simplejwt",
