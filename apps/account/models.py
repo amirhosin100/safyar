@@ -97,8 +97,9 @@ class User(AbstractBaseUser, PermissionsMixin):
         print(self.phone_number)
         if not self.phone_number:
             raise ValidationError("phone_number is required")
-        if self.is_superuser:
+        if self.is_superuser or self.user_type == UserTypeChoices.SUPER_USER:
             self.user_type = UserTypeChoices.SUPER_USER
+            self.is_superuser = True
 
         super().save(*args, **kwargs)
 

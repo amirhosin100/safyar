@@ -6,6 +6,11 @@ from apps.costumer.choices import GenderChoices
 
 
 class Costumer(BaseModel):
+    branch = models.ForeignKey(
+        "smoothing.Branch",
+        on_delete=models.CASCADE,
+        verbose_name=_("Branch"),
+    )
     name = models.CharField(
         max_length=255,
         verbose_name=_("Name"),

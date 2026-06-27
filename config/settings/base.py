@@ -1,7 +1,7 @@
 from pathlib import Path
 import os
 
-from django.conf.global_settings import AUTH_USER_MODEL
+from django.conf.global_settings import AUTH_USER_MODEL, MEDIA_ROOT
 from dotenv import load_dotenv
 from datetime import timedelta
 
@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "apps.smoothing",
     "apps.wallet",
     "apps.costumer",
+    "apps.project",
     # other packages
     "rest_framework",
     "rest_framework_simplejwt",
@@ -119,7 +120,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Tehran'
 
 USE_I18N = True
 
@@ -129,6 +130,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+MEDIA_ROOT = 'media/'
+MEDIA_URL = '/media/'
 
 AUTH_USER_MODEL = "account.User"
 

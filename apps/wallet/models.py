@@ -41,6 +41,12 @@ class WalletTransaction(BaseModel):
         choices=TransactionTypeChoices.choices,
         verbose_name=_("Transaction Type"),
     )
+    description = models.CharField(
+        max_length=255,
+        verbose_name=_("Description"),
+        blank=True,
+        null=True,
+    )
 
     class Meta:
         verbose_name = _("Wallet Transaction")

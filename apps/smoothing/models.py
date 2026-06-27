@@ -5,10 +5,10 @@ from apps.smoothing.choices import ClosedDayChoices, OrderChoices, JobTypeChoice
 
 
 class Smoothing(BaseModel):
-    user = models.ForeignKey(
+    user = models.OneToOneField(
         "account.User",
         on_delete=models.CASCADE,
-        related_name="branches",
+        related_name="smoothing",
         verbose_name=_("User"),
     )
     logo = models.ImageField(
