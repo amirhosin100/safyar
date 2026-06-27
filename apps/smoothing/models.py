@@ -3,7 +3,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from apps.core.validations import phone_number_validator
-from apps.smoothing.choices import ClosedDayChoices, OrderChoices, JobTypeChoices
+from apps.smoothing.choices import ClosedDayChoices, OrderChoices, JobTypeChoices, SmoothingStatusChoices
 
 
 class Smoothing(BaseModel):
@@ -41,6 +41,25 @@ class Smoothing(BaseModel):
         max_length=1000,
         verbose_name=_("Address")
     )
+    status = models.PositiveSmallIntegerField(
+        editable=False,
+        choices=SmoothingStatusChoices.choices,
+        default=0,
+        verbose_name=_("status")
+    )
+    wallet_stock = models.PositiveBigIntegerField(
+        editable=False,
+        verbose_name=_("Wallet Stock"),
+        default=0
+    )
+
+    def save(self, *args, **kwargs):
+        if self.wallet_stock == 0:
+            self.status = SmoothingStatusChoices.DEACTIVATED
+        else:
+            self.status = SmoothingStatusChoices.ACTIVATED
+
+        super().save(*args, **kwargs)
 
 
 class Branch(BaseModel):

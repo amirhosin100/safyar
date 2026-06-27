@@ -13,7 +13,13 @@ class OrderChoices(models.IntegerChoices):
     MAIN = 1, _("main")
     OTHER = 2, _("other")
 
+
 class JobTypeChoices(models.TextChoices):
     SMOOTHER = "smoother", _("Smoother")
     PAINTER = "painter", _("Painter")
     MASKER = "masker", _("Masker")
+
+
+class SmoothingStatusChoices(models.IntegerChoices):
+    DEACTIVATED = 0, _("Deactivated")
+    ACTIVATED = 1, _("Activated")
