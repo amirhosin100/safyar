@@ -130,7 +130,16 @@ TEST_MEDIA_ROOT = BASE_DIR / "test_media/"
 
 AUTH_USER_MODEL = "account.User"
 
-EXCLUDE_MODELS = {"LogEntity", "Session", "Group", "Token", "ContentType", "Migration"}
+EXCLUDE_MODELS = {
+    "LogEntity",
+    "Session",
+    "Group",
+    "Token",
+    "ContentType",
+    "Migration",
+    "SupportInformation",
+}
+
 EXCLUDE_APPS = {
     "log",
     "admin",

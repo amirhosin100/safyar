@@ -78,6 +78,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = "national_code"
     REQUIRED_FIELDS = ["phone_number", "full_name"]
 
+    @staticmethod
+    def get_write_only_fields():
+        return ["password"]
+
     def __str__(self):
         return self.national_code
 

@@ -57,7 +57,8 @@ except Exception as e:
 version = "v1"
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path(f"{version}/crud-api/", include(router.urls)),
+    path(f"api/{version}/", include(router.urls)),
+    path(f"api/{version}/",include("apps.owner.urls"))
 ]
 
 if settings.DEBUG:
