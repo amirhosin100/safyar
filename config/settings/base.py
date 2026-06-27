@@ -124,8 +124,9 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
-MEDIA_ROOT = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media/'
 MEDIA_URL = '/media/'
+TEST_MEDIA_ROOT = BASE_DIR / "test_media/"
 
 AUTH_USER_MODEL = "account.User"
 
