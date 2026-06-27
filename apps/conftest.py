@@ -16,6 +16,14 @@ def super_user():
         full_name="admin"
     )
 
+@pytest.fixture
+def normal_user():
+    return User.objects.create_user(
+        national_code="0987654321",
+        phone_number="09876543210",
+        full_name="normal_user"
+    )
+
 
 @pytest.fixture
 def client():

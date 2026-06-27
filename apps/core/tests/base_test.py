@@ -88,7 +88,8 @@ class Data(abc.ABC):
             response.pop(display_field)
 
         # ignore display_label field
-        response.pop("display_label")
+        if response.get("display_label"):
+            response.pop("display_label")
 
         assert response == self.response_data
 

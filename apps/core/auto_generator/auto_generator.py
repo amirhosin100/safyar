@@ -89,7 +89,7 @@ def save_viewsets_from_file(model: Type[Model]) -> bool:
     viewset_name = f"{name}ViewSet"
 
     try:
-        app_views = importlib.import_module(f"{app_label}.views")
+        app_views = importlib.import_module(f"apps.{app_label}.views")
     except ImportError:
         return False
 
@@ -110,7 +110,7 @@ def save_serializers_from_file(model: Type[Model]) -> bool:
     export_serializer = f"{name}ExportSerializer"
 
     try:
-        app_serializers = importlib.import_module(f"{app_label}.serializers")
+        app_serializers = importlib.import_module(f"apps.{app_label}.serializers")
 
         if hasattr(app_serializers, full_serializer):
             FULL_SERIALIZERS[key] = getattr(app_serializers, full_serializer)
