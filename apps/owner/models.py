@@ -6,6 +6,8 @@ just superusers could add or change these models
 from apps.core.models import BaseModel
 from django.db import models
 
+from apps.core.validations import phone_number_validator
+
 
 class SupportInformation(BaseModel):
     landline_number = models.CharField(
@@ -15,6 +17,7 @@ class SupportInformation(BaseModel):
     )
     phone_number = models.CharField(
         max_length=11,
+        validators=[phone_number_validator],
         null=True,
         blank=True
     )

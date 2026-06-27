@@ -2,6 +2,7 @@ from django.db import models
 from apps.core.models import BaseModel
 from django.utils.translation import gettext_lazy as _
 
+from apps.core.validations import phone_number_validator
 from apps.costumer.choices import GenderChoices
 
 
@@ -23,6 +24,7 @@ class Costumer(BaseModel):
     phone_number = models.CharField(
         max_length=11,
         verbose_name=_("Phone Number"),
+        validators=[phone_number_validator]
     )
     address = models.TextField(
         max_length=1000,

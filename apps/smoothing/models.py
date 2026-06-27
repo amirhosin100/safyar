@@ -1,6 +1,8 @@
 from apps.core.models import BaseModel
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+
+from apps.core.validations import phone_number_validator
 from apps.smoothing.choices import ClosedDayChoices, OrderChoices, JobTypeChoices
 
 
@@ -27,14 +29,18 @@ class Smoothing(BaseModel):
         verbose_name=_("Landline Number"),
     )
     phone_number = models.CharField(
-        max_length=20,
+        max_length=11,
         verbose_name=_("Phone Number"),
+        validators=[phone_number_validator]
     )
     city = models.CharField(
         max_length=20,
         verbose_name=_("City"),
     )
-    address = models.TextField(verbose_name=_("Address"))
+    address = models.TextField(
+        max_length=1000,
+        verbose_name=_("Address")
+    )
 
 
 class Branch(BaseModel):
@@ -81,6 +87,7 @@ class Colleague(BaseModel):
     phone_number = models.CharField(
         max_length=11,
         verbose_name=_("Phone Number"),
+        validators=[phone_number_validator]
     )
     job_type = models.CharField(
         max_length=20,

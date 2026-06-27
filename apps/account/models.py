@@ -1,4 +1,3 @@
-from django.core.validators import RegexValidator
 from django.db import models
 from rest_framework.exceptions import ValidationError
 
@@ -6,6 +5,8 @@ from apps.account.choices import OwnerRequestChoices, UserTypeChoices
 from apps.core.models import BaseManager, BaseModel
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser, PermissionsMixin
 from django.utils.translation import gettext_lazy as _
+
+from apps.core.validations import phone_number_validator, national_code_validator
 
 
 class UserManager(BaseUserManager, BaseManager):
@@ -50,24 +51,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     national_code = models.CharField(
         max_length=10,
         unique=True,
-        validators=[
-            RegexValidator(
-                regex=r'^\d{10}$',
-                message='Only numbers are allowed.'
-            )
-        ],
+        validators=[national_code_validator],
         verbose_name=_("national code"),
     )
     phone_number = models.CharField(
         max_length=11,
         unique=True,
         verbose_name=_("phone number"),
-        validators=[
-            RegexValidator(
-                r'^09\d{9}$',
-                message=_("your phone number is invalid. correct is 09xxxxxxxxx")
-            )
-        ]
+        validators=[phone_number_validator]
     )
     full_name = models.CharField(
         max_length=255,
@@ -111,14 +102,33 @@ class OwnerRequest(BaseModel):
         verbose_name=_("user"),
         related_name="request",
     )
-    submit_date = models.DateField(
-        auto_now_add=True,
-        verbose_name=_("submit date"),
-        help_text=_("for owner users")
-    )
     status = models.CharField(
         choices=OwnerRequestChoices.choices,
         max_length=2,
         default=OwnerRequestChoices.PENDING,
         verbose_name=_("Status"),
     )
+    address = models.TextField(
+        max_length=1000,
+        verbose_name=_("Address"),
+    )
+    shop_name = models.CharField(
+        max_length=255,
+        verbose_name=_("Shop name"),
+    )
+
+    class Meta:
+        verbose_name = _("Owner Request")
+        verbose_name_plural = _("Owner Requests")
+
+    def __str__(self):
+        return f"{self.user.full_name}:{self.shop_name}"
+
+    def save(self, *args, **kwargs):
+        if self.status == OwnerRequestChoices.ACCEPTED:
+            self.user.is_active = True
+        elif self.status in (OwnerRequestChoices.REJECTED, OwnerRequestChoices.PENDING):
+            self.user.is_active = False
+
+        self.user.save()
+        super().save(*args, **kwargs)
