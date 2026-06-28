@@ -2,8 +2,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from apps.core.base_classes.base_viewset import BaseProtectionViewSet
 from apps.core.permissions import IsSuperUser, IsAdminOrOwner, HasBranch
-from apps.smoothing.models import Smoothing, Branch
-from apps.smoothing.serializers import SmoothingSerializer, BranchSerializer
+from apps.smoothing.models import Smoothing, Branch, Colleague
+from apps.smoothing.serializers import SmoothingSerializer, BranchSerializer, Colleague
 
 
 # TODO write tests for these
@@ -24,6 +24,19 @@ class BranchViewSet(BaseProtectionViewSet):
 
     def get_queryset(self):
         return self.queryset.filter(smoothing=self.request.user.branch.smoothing)
+
+
+class ColleagueViewSet(BaseProtectionViewSet):
+    serializer_class = BranchSerializer
+    permission_classes = (HasBranch,)
+    queryset = Colleague.objects.all()
+
+    def perform_create(self, serializer):
+        branch = self.request.user.branch
+        serializer.save(branch=branch)
+
+    def get_queryset(self):
+        return self.queryset.filter(branch=self.request.user.branch)
 
 
 class SmoothingAPIView(APIView):

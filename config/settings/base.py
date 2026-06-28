@@ -153,6 +153,7 @@ EXCLUDE_APPS = {
     "messages",
     "authtoken",
     "axes",
+    "account"
 }
 
 # REST_FRAMEWORK

@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from apps.account.choices import UserTypeChoices
 from apps.account.models import User, OwnerRequest
@@ -18,7 +19,7 @@ class UserLoginSerializer(serializers.ModelSerializer):
         )
 
 
-class UserLoginResponseSerializer(serializers.ModelSerializer):
+class UserLoginResponseSerializer(serializers.Serializer):
     access = serializers.CharField()
     refresh = serializers.CharField()
 
@@ -59,3 +60,68 @@ class UserRegisterSerializer(serializers.Serializer):
         OwnerRequest.objects.create(user=user)
 
         return user
+
+
+class UserDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            "full_name",
+            "branch",
+            "national_code",
+            "phone_number",
+            "user_type",
+        ]
+
+
+class UserCreationSerializer(UserDetailSerializer):
+    password = serializers.CharField(
+        required=True,
+        write_only=True
+    )
+
+    class Meta:
+        model = User
+        fields = UserDetailSerializer.Meta.fields + ["password"]
+
+    def validate_user_type(self, user_type):
+        if user_type not in (UserTypeChoices.ADMIN, UserTypeChoices.NORMAL):
+            raise ValidationError(
+                f"you can use these : {UserTypeChoices.ADMIN.value}, {UserTypeChoices.NORMAL.value}"
+            )
+        return user_type
+
+    def validate_password(self, password):
+        try:
+            validate_password(password)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError("please fix these %s" % str(e.messages))
+
+        return password
+
+    def create(self, validated_data):
+        user = User(
+            full_name=validated_data["full_name"],
+            branch=validated_data["branch"],
+            national_code=validated_data["national_code"],
+            phone_number=validated_data["phone_number"],
+            user_type=validated_data["user_type"],
+        )
+        user.set_password(validated_data["password"])
+        user.save()
+
+        return user
+
+
+class UserUpdateSerializer(UserCreationSerializer):
+    password = serializers.CharField(
+        required=False,
+        write_only=True
+    )
+
+    def save(self, **kwargs):
+        password = self.validated_data.pop("password", None)
+        if password:
+            self.instance.set_password(password)
+        super().save(**kwargs)
+        
