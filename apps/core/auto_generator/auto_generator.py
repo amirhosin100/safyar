@@ -53,20 +53,12 @@ def get_or_create_serializer(
         if hasattr(model, "get_write_only_fields"):
             write_only_fields = model.get_write_only_fields()
 
-        meta_exclude: tuple[str, ...]
-        try:
-            model._meta.get_field("deleted")
-        except FieldDoesNotExist:
-            meta_exclude = tuple()
-        else:
-            meta_exclude = ("deleted",)
-
         Meta = type(
             "Meta",
             (),
             {
                 "model": model,
-                "exclude": meta_exclude,
+                "fields": "__all__",
                 "extra_kwargs": {
                     key: {"write_only": True} for key in write_only_fields
                 },

@@ -138,6 +138,8 @@ EXCLUDE_MODELS = {
     "ContentType",
     "Migration",
     "SupportInformation",
+    "WalletTransaction",
+    "Wallet"
 }
 
 EXCLUDE_APPS = {

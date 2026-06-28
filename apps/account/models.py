@@ -70,6 +70,13 @@ class User(AbstractBaseUser, PermissionsMixin):
         default=UserTypeChoices.NORMAL,
         verbose_name=_("User type"),
     )
+    branch = models.ForeignKey(
+        "smoothing.Branch",
+        on_delete=models.PROTECT,
+        verbose_name=_("Branch"),
+        null=True,
+        blank=True
+    )
 
     is_active = models.BooleanField(default=True)
 

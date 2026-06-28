@@ -56,10 +56,6 @@ class BaseProtectionViewSet(BaseAPIView, ModelViewSet):
             simple_ser = get_or_create_serializer(model, "simple")
             if simple_ser is not None:
                 return simple_ser
-        elif self.action == "export_objects":
-            return get_or_create_serializer(model, "export")
-        elif self.action == "import_objects":
-            return get_or_create_serializer(model, "full")
         elif self.action == "form_schema":
             return get_or_create_serializer(model, "full")
         return get_or_create_serializer(model, "full")
