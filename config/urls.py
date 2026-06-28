@@ -8,6 +8,7 @@ from rest_framework.routers import DefaultRouter
 from apps.core.auto_generator.auto_generator import get_or_create_import_export_viewset, get_or_create_viewset
 from apps.core.utils.api_route import get_crud_api_prefix
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+from rest_framework_simplejwt.views import TokenRefreshView
 
 router = DefaultRouter()
 custom_import_export_router = DefaultRouter()
@@ -66,10 +67,12 @@ schema_urlpatterns = [
 urlpatterns = [
     path("admin/", admin.site.urls),
     path(f"api/{version}/schema/", include(schema_urlpatterns)),
+    path(f'api/{version}/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
     path(f"api/{version}/", include(router.urls)),
     path(f"api/{version}/", include("apps.owner.urls")),
     path(f"api/{version}/", include("apps.wallet.urls")),
+    path(f"api/{version}/", include("apps.smoothing.urls")),
 ]
 
 if settings.DEBUG:

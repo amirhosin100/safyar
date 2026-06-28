@@ -1,6 +1,7 @@
 from rest_framework import permissions
 
 from apps.account.choices import UserTypeChoices
+from apps.smoothing.models import Smoothing
 
 
 class IsSuperUser(permissions.IsAuthenticated):
@@ -11,9 +12,7 @@ class IsSuperUser(permissions.IsAuthenticated):
 class IsJoinedToSmoothingOrBranch(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         if request.user and request.user.is_authenticated:
-            if hasattr(obj, "branch") and obj.branch.smoothing.user == request.user:
-                return True
-            if hasattr(obj, "smoothing") and obj.smoothing.user == request.user:
+            if isinstance(obj, Smoothing) and obj.user == request.use:
                 return True
         return False
 
@@ -33,7 +32,10 @@ class IsAdminOrOwner(permissions.IsAuthenticated, IsJoinedToSmoothingOrBranch):
 
     def has_permission(self, request, view):
         if super().has_permission(request, view):
-            if request.user.user_type in [UserTypeChoices.OWNER, UserTypeChoices.ADMIN]:
+            if (
+                    request.user.user_type in [UserTypeChoices.OWNER, UserTypeChoices.ADMIN] and
+                    hasattr("branch", request.user)
+            ):
                 return True
         return False
 

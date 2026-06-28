@@ -141,7 +141,7 @@ EXCLUDE_MODELS = {
     "Migration",
     "SupportInformation",
     "WalletTransaction",
-    "Wallet"
+    "Wallet",
 }
 
 EXCLUDE_APPS = {
