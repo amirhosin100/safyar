@@ -1,4 +1,5 @@
 from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.mixins import ListModelMixin
 
 from apps.core.permissions import HasBranch, IsSuperUser
 from apps.core.base_classes.base_viewset import BaseAPIView
@@ -10,6 +11,7 @@ from apps.wallet.serializers import (
 )
 
 
+# TODO write tests for these
 class WalletTransactionSuperUserListView(ListAPIView, BaseAPIView):
     pagination_class = OptionalPageNumberPagination
     serializer_class = WalletTransactionSuperUserSerializer
