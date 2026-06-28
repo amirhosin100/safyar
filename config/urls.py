@@ -58,7 +58,8 @@ version = "v1"
 urlpatterns = [
     path("admin/", admin.site.urls),
     path(f"api/{version}/", include(router.urls)),
-    path(f"api/{version}/",include("apps.owner.urls"))
+    path(f"api/{version}/",include("apps.owner.urls")),
+    path(f"api/{version}/",include("apps.wallet.urls")),
 ]
 
 if settings.DEBUG:

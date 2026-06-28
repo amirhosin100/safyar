@@ -36,3 +36,11 @@ class IsAdminOrOwner(permissions.IsAuthenticated, IsJoinedToSmoothingOrBranch):
             if request.user.user_type in [UserTypeChoices.OWNER, UserTypeChoices.ADMIN]:
                 return True
         return False
+
+
+class HasBranch(permissions.IsAuthenticated):
+    def has_permission(self, request, view):
+        if super().has_permission(request, view):
+            if hasattr(request.user, "branch") and request.user.branch is not None:
+                return True
+        return False
