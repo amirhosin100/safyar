@@ -68,14 +68,26 @@ class Branch(BaseModel):
         on_delete=models.PROTECT,
         related_name="branches",
     )
+    name = models.CharField(
+        max_length=255,
+        verbose_name=_("Name")
+    )
     closed_days = models.CharField(
         max_length=10,
         verbose_name=_("Closed Days"),
         choices=ClosedDayChoices.choices,
         default=ClosedDayChoices.NO_DAYS_OFF,
     )
-    open_time = models.TimeField(verbose_name=_("Open time"))
-    closed_time = models.TimeField(verbose_name=_("Closed time"))
+    open_time = models.TimeField(
+        verbose_name=_("Open time"),
+        null=True,
+        blank=True
+    )
+    closed_time = models.TimeField(
+        verbose_name=_("Closed time"),
+        null=True,
+        blank=True
+    )
     order = models.PositiveSmallIntegerField(
         verbose_name=_("Order"),
         choices=OrderChoices.choices,
