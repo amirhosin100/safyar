@@ -33,17 +33,6 @@ class BaseAPIView(GenericAPIView):
     ordering = "-id"
     is_list = True
 
-    def get_serializer_class(self):
-        model = self.get_queryset().model
-        from apps.core.auto_generator.auto_generator import get_or_create_serializer
-
-        if self.is_list:
-            serializer = get_or_create_serializer(model, "simple")
-        else:
-            serializer = get_or_create_serializer(model, "full")
-
-        return serializer
-
 
 class BaseProtectionViewSet(BaseAPIView, ModelViewSet):
     pagination_class = OptionalPageNumberPagination
@@ -78,62 +67,3 @@ class BaseProtectionViewSet(BaseAPIView, ModelViewSet):
         with translation.override(lang_code):
             schema = build_form_schema(model, serializer)
         return Response(schema)
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        serializer_class = self.get_serializer_class()()  # create an instance
-        fields = serializer_class.fields
-
-        upper = self.request.GET.get("upper_obj", None) == "true"
-        # step1, step2
-        relation_fields_s1 = ()
-        relation_fields_s2 = ()
-
-        if self.action == "list":
-            # FK + M2M expanded in list serializer; select/prefetch to avoid N+1.
-            relation_fields_s1 = (ManyRelatedField, PrimaryKeyRelatedField)
-
-        elif self.action == "retrieve":
-            relation_fields_s1 = (PrimaryKeyRelatedField, ManyRelatedField)
-            # if upper is false, we don't need FK,and,O2O
-            if upper:
-                relation_fields_s2 = (ForeignKey, OneToOneField)
-
-        for field_name, field in fields.items():
-            if isinstance(field, relation_fields_s1):
-                if hasattr(field, "child_relation"):
-                    # if field is be ManyToMany
-                    sub_fields = field.child_relation.queryset.model._meta.fields
-                    queryset = queryset.prefetch_related(field_name)
-                else:
-                    # Foreign key and OneToOne
-                    sub_fields = field.queryset.model._meta.fields
-                    queryset = queryset.select_related(field_name)
-
-                sub_rel_fields = [
-                    sub_field
-                    for sub_field in sub_fields
-                    if isinstance(sub_field, relation_fields_s2)
-                ]
-                for sub_rel_field in sub_rel_fields:
-                    related = self.get_related(queryset, field, sub_rel_field)
-                    queryset = related(field_name + "__" + sub_rel_field.name)
-
-        return queryset
-
-
-    @staticmethod
-    def get_related(query_set, parent_field, sub_field):
-        """
-        checking if both fields is Foreign Key, it returns `select_related`
-        else it returns `prefetch_related`
-        FK -> FK = 'select_related'
-        FK -> M = 'prefetch_related'
-        M -> M = 'prefetch_related'
-        M -> FK = 'prefetch_related'
-        """
-        if isinstance(parent_field, PrimaryKeyRelatedField) and isinstance(
-            sub_field, (ForeignKey, OneToOneField)
-        ):
-            return query_set.select_related
-        return query_set.prefetch_related

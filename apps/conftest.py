@@ -2,10 +2,15 @@ import os
 import shutil
 
 import pytest
+
+from apps.account.choices import UserTypeChoices
 from apps.account.models import User
 from django.conf import settings
 from django.test.utils import override_settings
 from rest_framework.test import APIClient
+
+from apps.smoothing.models import Smoothing
+from apps.smoothing.tests.fixtures.data import smoothing_initial_data
 
 
 @pytest.fixture
@@ -17,11 +22,20 @@ def super_user():
     )
 
 @pytest.fixture
-def normal_user():
+def owner_user():
     return User.objects.create_user(
         national_code="0987654321",
         phone_number="09876543210",
-        full_name="normal_user"
+        full_name="normal_user",
+        user_type=UserTypeChoices.OWNER
+    )
+
+@pytest.fixture
+def normal_user():
+    return User.objects.create_user(
+        national_code="1234562890",
+        phone_number="09176543210",
+        full_name="normal_user",
     )
 
 

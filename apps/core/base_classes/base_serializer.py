@@ -27,36 +27,8 @@ class BaseModelSerializer(ModelSerializer):
         except Exception:
             return False
 
-    def inject_nested_relations(self, representation: dict, instance: Any) -> None:
-        """Replace PK / ID lists with nested simple-serializer payloads."""
-        req = self.context.get("request", None)
-        for field_name, field in self.fields.items():
-            if not isinstance(field, (PrimaryKeyRelatedField, ManyRelatedField)):
-                continue
-            try:
-                related_instance = getattr(instance, field_name)
-            except Exception:
-                continue
-            if not related_instance:
-                continue
-
-            cls = related_instance.__class__
-            many = False
-            if isinstance(field, ManyRelatedField):
-                cls = related_instance.model
-                many = True
-
-            serializer_cls = BaseModelSerializer.get_serializer_class(cls)
-            nested = serializer_cls(
-                related_instance,
-                context={"request": req},
-                many=many,
-            )
-            representation[field_name] = nested.data
-
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        self.inject_nested_relations(representation, instance)
         for field_name, field in self.fields.items():
             self.set_display_field(representation, instance, field_name)
         representation["display_label"] = str(instance)
@@ -67,8 +39,6 @@ class BaseModelSerializer(ModelSerializer):
 class BaseSimpleSerializer(ModelSerializer):
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        # Match nested relation shape used on detail payloads so lists show labels.
-        BaseModelSerializer.inject_nested_relations(self, representation, instance)
 
         operation = False
         if "request" in self.context and self.context["request"] is not None:

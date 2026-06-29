@@ -7,8 +7,8 @@ from apps.smoothing.models import Smoothing
 class TestSmoothingView(BaseTestView):
     model = Smoothing
 
-    def test_with_normal_user(self, normal_user,api_client):
-        api_client.force_authenticate(normal_user)
+    def test_with_normal_user(self, owner_user, api_client):
+        api_client.force_authenticate(owner_user)
         self.create_data.set_up()
         response = api_client.post(
             self.list_create_url, data=self.create_data.request_data, format="multipart"

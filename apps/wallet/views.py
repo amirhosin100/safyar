@@ -13,12 +13,13 @@ from apps.wallet.serializers import (
 )
 
 
-# TODO write tests for these
 class WalletTransactionSuperUserListView(ListAPIView, BaseAPIView):
     pagination_class = OptionalPageNumberPagination
-    serializer_class = WalletTransactionSuperUserSerializer
     permission_classes = (IsSuperUser,)
     queryset = WalletTransaction.objects.select_related("wallet__smoothing")
+
+    def get_serializer_class(self):
+        return WalletTransactionSuperUserSerializer
 
 
 class WalletTransactionListView(ListAPIView, BaseAPIView):

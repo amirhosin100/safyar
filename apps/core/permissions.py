@@ -43,6 +43,6 @@ class IsAdminOrOwner(permissions.IsAuthenticated, IsJoinedToSmoothingOrBranch):
 class HasBranch(permissions.IsAuthenticated):
     def has_permission(self, request, view):
         if super().has_permission(request, view):
-            if hasattr(request.user, "branch") and request.user.branch is not None:
+            if request.user.branch is not None:
                 return True
         return False

@@ -5,8 +5,8 @@ from apps.owner.models import Version, UsageMethod
 class TestVersionView(BaseTestView):
     model = Version
 
-    def test_with_normal_user(self, api_client, normal_user):
-        api_client.force_authenticate(normal_user)
+    def test_with_normal_user(self, api_client, owner_user):
+        api_client.force_authenticate(owner_user)
         response = api_client.get(self.list_create_url)
         assert response.status_code == 403
 
@@ -18,8 +18,8 @@ class TestVersionView(BaseTestView):
 class TestUsageMethodView(BaseTestView):
     model = UsageMethod
 
-    def test_with_normal_user(self, api_client, normal_user):
-        api_client.force_authenticate(normal_user)
+    def test_with_normal_user(self, api_client, owner_user):
+        api_client.force_authenticate(owner_user)
         response = api_client.get(self.list_create_url)
         assert response.status_code == 403
 
@@ -113,12 +113,12 @@ class TestSupportInformationView:
         response = client.get(SUPPORT_INFO_URL)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_normal_user_cannot_access(self, api_client, normal_user):
-        api_client.force_authenticate(normal_user)
+    def test_normal_user_cannot_access(self, api_client, owner_user):
+        api_client.force_authenticate(owner_user)
         response = api_client.get(SUPPORT_INFO_URL)
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_normal_user_cannot_update(self, api_client, normal_user, support_info_obj):
-        api_client.force_authenticate(normal_user)
+    def test_normal_user_cannot_update(self, api_client, owner_user, support_info_obj):
+        api_client.force_authenticate(owner_user)
         response = api_client.patch(SUPPORT_INFO_URL, data={"email": "hack@example.com"})
         assert response.status_code == status.HTTP_403_FORBIDDEN

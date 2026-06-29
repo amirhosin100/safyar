@@ -9,6 +9,7 @@ class Wallet(BaseModel):
         "smoothing.Smoothing",
         on_delete=models.CASCADE,
         verbose_name=_("Smoothing"),
+        related_name="wallet",
     )
     stock = models.PositiveBigIntegerField(
         verbose_name=_("Stock"),
@@ -27,6 +28,7 @@ class WalletTransaction(BaseModel):
         Wallet,
         on_delete=models.CASCADE,
         verbose_name=_("Wallet"),
+        related_name="transactions",
     )
     amount = models.BigIntegerField(
         verbose_name=_("Amount"),

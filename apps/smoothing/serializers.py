@@ -6,7 +6,6 @@ class SmoothingSerializer(BaseModelSerializer):
     class Meta:
         model = Smoothing
         fields = "__all__"
-        read_only_fields = ["user"]
 
 
 class BranchSerializer(BaseModelSerializer):

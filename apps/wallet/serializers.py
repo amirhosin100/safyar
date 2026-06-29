@@ -1,19 +1,20 @@
 from rest_framework.exceptions import ValidationError
 
-from apps.core.base_classes.base_serializer import BaseModelSerializer
 from rest_framework import serializers
 from apps.wallet.models import WalletTransaction, Wallet
 
 
-class WalletTransactionSerializer(BaseModelSerializer):
+class WalletTransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = WalletTransaction
         fields = [
+            "id",
             "wallet",
             "amount",
             "status",
             "transaction_type",
             "description",
+            "created_at",
         ]
 
 
@@ -24,7 +25,7 @@ class WalletTransactionSuperUserSerializer(WalletTransactionSerializer):
         model = WalletTransaction
         fields = WalletTransactionSerializer.Meta.fields + ["smoothing_name"]
 
-    def get_smoothing(self, obj):
+    def get_smoothing_name(self, obj):
         return obj.wallet.smoothing.name
 
 

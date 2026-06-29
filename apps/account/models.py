@@ -7,6 +7,7 @@ from django.contrib.auth.models import BaseUserManager, AbstractBaseUser, Permis
 from django.utils.translation import gettext_lazy as _
 
 from apps.core.validations import phone_number_validator, national_code_validator
+from apps.smoothing.models import Smoothing, Branch
 
 
 class UserManager(BaseUserManager, BaseManager):
@@ -96,7 +97,6 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.is_superuser
 
     def save(self, *args, **kwargs):
-        print(self.phone_number)
         if not self.phone_number:
             raise ValidationError("phone_number is required")
         if self.is_superuser or self.user_type == UserTypeChoices.SUPER_USER:
@@ -104,6 +104,31 @@ class User(AbstractBaseUser, PermissionsMixin):
             self.is_superuser = True
 
         super().save(*args, **kwargs)
+        # When a user is created, if the type of user is OWNER or SUPERUSER and the user is active
+        # It creates Smoothing and empty branch for it
+
+        if self.user_type in (UserTypeChoices.OWNER, UserTypeChoices.SUPER_USER) and self.is_active:
+            if not hasattr(self, "smoothing"):
+                data = {
+                    "user": self,
+                    "phone_number": self.phone_number,
+                    "owner_name": self.full_name,
+                }
+                if hasattr(self, "request"):
+                    data["address"] = self.request.address
+                    data["name"] = self.request.shop_name
+
+                smoothing = Smoothing.objects.create(**data)
+                self.smoothing = smoothing
+
+            if self.branch is None:
+                branch = Branch.objects.create(
+                    smoothing=self.smoothing,
+                    name="شعبه ی مرکزی",
+                    order=1
+                )
+                self.branch_id = branch.id
+                self.save()
 
 
 class OwnerRequest(BaseModel):

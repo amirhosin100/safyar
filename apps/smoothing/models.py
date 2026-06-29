@@ -15,27 +15,38 @@ class Smoothing(BaseModel):
     )
     logo = models.ImageField(
         verbose_name=_("Logo"),
+        null=True,
+        blank=True,
     )
     name = models.CharField(
         max_length=255,
         verbose_name=_("Branch Name"),
+        null=True,
+        blank=True,
     )
     owner_name = models.CharField(
         max_length=255,
         verbose_name=_("Owner Name"),
+        blank=True,
     )
     landline_number = models.CharField(
         max_length=20,
         verbose_name=_("Landline Number"),
+        null=True,
+        blank=True,
     )
     phone_number = models.CharField(
         max_length=11,
         verbose_name=_("Phone Number"),
-        validators=[phone_number_validator]
+        validators=[phone_number_validator],
+        null=True,
+        blank=True,
     )
     city = models.CharField(
         max_length=20,
         verbose_name=_("City"),
+        null=True,
+        blank=True,
     )
     address = models.TextField(
         max_length=1000,
@@ -92,9 +103,16 @@ class Branch(BaseModel):
         verbose_name=_("Order"),
         choices=OrderChoices.choices,
     )
-
-    first_follow_up_code = models.PositiveBigIntegerField(verbose_name=_("First Follow Up Code"))
-    next_follow_up_code = models.PositiveBigIntegerField(verbose_name=_("Next Follow Up Code"))
+    first_follow_up_code = models.PositiveBigIntegerField(
+        verbose_name=_("First Follow Up Code"),
+        null=True,
+        blank=True
+    )
+    next_follow_up_code = models.PositiveBigIntegerField(
+        verbose_name=_("Next Follow Up Code"),
+        null=True,
+        blank=True
+    )
 
     class Meta:
         verbose_name = _("Branch")
