@@ -8,15 +8,12 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 
 
-class UserLoginSerializer(serializers.ModelSerializer):
+class UserLoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
-
-    class Meta:
-        model = User
-        fields = (
-            "national_code",
-            "password",
-        )
+    national_code = serializers.CharField(
+        max_length=10,
+        validators=[national_code_validator],
+    )
 
 
 class UserLoginResponseSerializer(serializers.Serializer):

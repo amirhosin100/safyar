@@ -1,4 +1,4 @@
-from apps.account.tests.data import user_initial_data
+from apps.account.tests.fixtures.data import user_initial_data
 from apps.core.tests.image import create_image
 from apps.core.tests.base_test import APIRequestData, InitialData
 from apps.smoothing.choices import SmoothingStatusChoices

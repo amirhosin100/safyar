@@ -53,7 +53,7 @@ class UserLoginView(APIView):
 
         tokens = get_tokens_for_user(user)
         res_serializer = UserLoginResponseSerializer(data=tokens)
-        return Response(res_serializer.data, status=status.HTTP_200_OK)
+        return Response(res_serializer.initial_data, status=status.HTTP_200_OK)
 
 
 class UserRegisterView(APIView):
