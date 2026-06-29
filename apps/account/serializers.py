@@ -1,11 +1,13 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
 
 from apps.account.choices import UserTypeChoices
 from apps.account.models import User, OwnerRequest
 from apps.core.validations import phone_number_validator, national_code_validator
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
+from apps.core.captcha import Captcha
 
 
 class UserLoginSerializer(serializers.Serializer):
@@ -29,18 +31,26 @@ class UserRegisterSerializer(serializers.Serializer):
     shop_name = serializers.CharField()
     password1 = serializers.CharField(write_only=True)
     password2 = serializers.CharField(write_only=True)
+    captcha_key = serializers.UUIDField(write_only=True)
+    captcha_value = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
         password1 = attrs.get('password1')
         password2 = attrs.get('password2')
 
         if password1 != password2:
-            raise serializers.ValidationError("Passwords don't match")
+            raise serializers.ValidationError(_("Passwords don't match"))
 
         try:
             validate_password(password1)
         except DjangoValidationError as e:
             raise serializers.ValidationError("please fix these %s" % str(e.messages))
+
+        # captcha
+        if not Captcha.check_captcha(attrs["captcha_key"], attrs["captcha_value"]):
+            raise serializers.ValidationError(
+                _("Your captcha is invalid or expired, please try again.")
+            )
 
         return attrs
 
@@ -57,6 +67,11 @@ class UserRegisterSerializer(serializers.Serializer):
         OwnerRequest.objects.create(user=user)
 
         return user
+
+
+class CaptchaSerializer(serializers.Serializer):
+    captcha_key = serializers.UUIDField()
+    captcha_image = serializers.CharField()
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
@@ -121,4 +136,3 @@ class UserUpdateSerializer(UserCreationSerializer):
         if password:
             self.instance.set_password(password)
         super().save(**kwargs)
-        

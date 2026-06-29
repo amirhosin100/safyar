@@ -14,7 +14,18 @@ services:
     ports:
       - "5432:5432"
 
+  redis:
+    container_name: redis_safyar
+    image: redis:8
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - safyar_redis_data_dev:/data
+    command: redis-server --appendonly yes
+
 
 volumes:
   safyar_postgres_data_dev:
+  safyar_redis_data_dev:
 

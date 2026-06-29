@@ -100,6 +100,19 @@ else:
         "in .env file"
     )
 
+REDIS_URL = os.getenv("REDIS_URL")
+if REDIS_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": REDIS_URL,
+        }
+    }
+else:
+    raise EnvironmentError(
+        "Please set REDIS_URL in .env file"
+    )
+
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 

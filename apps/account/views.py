@@ -12,12 +12,13 @@ from apps.account.serializers import (
     UserRegisterSerializer,
     UserCreationSerializer,
     UserDetailSerializer,
-    UserUpdateSerializer
+    UserUpdateSerializer, CaptchaSerializer
 )
 from apps.core.base_classes.base_viewset import BaseAPIView
-from apps.core.permissions import HasBranch, IsAdminOrOwner
+from apps.core.permissions import IsAdminOrOwner
 from apps.core.utils.jwt import get_tokens_for_user
 from django.db import IntegrityError
+from apps.core.captcha import Captcha
 
 
 # TODO write tests
@@ -75,6 +76,16 @@ class UserRegisterView(APIView):
             )
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class CreateCaptchaView(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        data = Captcha.create_captcha()
+        serializer = CaptchaSerializer(data=data)
+
+        return Response(serializer.initial_data, status=status.HTTP_201_CREATED)
 
 
 class UserListCreateView(BaseAPIView):
