@@ -40,21 +40,6 @@ for app_config in apps.get_app_configs():
         except Exception as e:
             print(f"Skipping {app_config.label}.{model.__name__}: {e}")
 
-# Django auth.Group CRUD (auth app is excluded from auto-registration)
-try:
-    group_prefix = get_crud_api_prefix(Group)
-    router.register(
-        group_prefix,
-        get_or_create_viewset(Group),
-        basename="auth-group",
-    )
-    custom_import_export_router.register(
-        group_prefix,
-        get_or_create_import_export_viewset(Group),
-        basename="custom-auth-group",
-    )
-except Exception as e:
-    print(f"Skipping auth.Group registration: {e}")
 
 version = "v1"
 

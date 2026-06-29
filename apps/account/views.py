@@ -20,6 +20,7 @@ from apps.core.utils.jwt import get_tokens_for_user
 from django.db import IntegrityError
 
 
+# TODO write tests
 class UserLoginView(APIView):
     permission_classes = (AllowAny,)
     serializer_class = UserLoginSerializer
