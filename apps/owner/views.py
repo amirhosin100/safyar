@@ -1,10 +1,14 @@
 from rest_framework import viewsets, views
 from rest_framework.response import Response
 
+from apps.account.choices import UserTypeChoices
+from apps.account.models import User
 from apps.core.permissions import IsSuperUser
+from apps.core.base_classes.base_viewset import BaseProtectionViewSet
 
 from apps.owner.models import UsageMethod, Version, SupportInformation
-from apps.owner.serializers import UsageMethodSerializer, VersionSerializer, SupportInformationSerializer
+from apps.owner.serializers import UsageMethodSerializer, VersionSerializer, SupportInformationSerializer, \
+    UserOwnerSerializer
 
 
 class UsageMethodViewSet(viewsets.ModelViewSet):
@@ -40,3 +44,9 @@ class SupportInformationView(views.APIView):
 
     def patch(self, request):
         return self.edit(request, partial=True)
+
+
+class UserOwnerViewSet(BaseProtectionViewSet):
+    queryset = User.objects.filter(user_type=UserTypeChoices.OWNER)
+    serializer_class = UserOwnerSerializer
+    permission_classes = (IsSuperUser,)
