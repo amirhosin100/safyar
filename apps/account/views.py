@@ -1,6 +1,8 @@
+import random
+
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -12,13 +14,20 @@ from apps.account.serializers import (
     UserRegisterSerializer,
     UserCreationSerializer,
     UserDetailSerializer,
-    UserUpdateSerializer, CaptchaSerializer
+    UserUpdateSerializer,
+    CaptchaSerializer,
+    SendCodeResetPasswordSerializer,
+    VerifyCodeSerializer, ResetPasswordSerializer, UserSerializer
 )
 from apps.core.base_classes.base_viewset import BaseAPIView
 from apps.core.permissions import IsAdminOrOwner
 from apps.core.utils.jwt import get_tokens_for_user
 from django.db import IntegrityError
 from apps.core.captcha import Captcha
+from django.core.cache import cache
+from django.utils.translation import gettext_lazy as _
+
+from apps.core.utils.prefix import verify_code
 
 
 # TODO write tests
@@ -86,6 +95,58 @@ class CreateCaptchaView(APIView):
         serializer = CaptchaSerializer(data=data)
 
         return Response(serializer.initial_data, status=status.HTTP_201_CREATED)
+
+
+class SendCodeResetPasswordView(APIView):
+    permission_classes = (AllowAny,)
+    serializer_class = SendCodeResetPasswordSerializer
+
+    def post(self, request):
+        serializer = SendCodeResetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            user = User.objects.get(national_code=serializer.validated_data["national_code"])
+        except User.DoesNotExist:
+            return Response(serializer.data)
+
+        code = "".join(random.choices("0123456789", k=6))
+        # TODO remove print and send a real sms
+        print(code)
+        national_code = user.national_code
+        cache.set(verify_code.format(national_code), code, timeout=60)
+
+        return Response(serializer.data)
+
+
+class VerifyCodeView(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        serializer = VerifyCodeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ResetPasswordView(APIView):
+    permission_classes = (AllowAny,)
+    serializer_class = ResetPasswordSerializer
+
+    def post(self, request):
+        serializer = ResetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = {"message": _("Password has been reset")}
+
+        try:
+            user = User.objects.get(national_code=serializer.validated_data["national_code"])
+        except User.DoesNotExist:
+            return Response(data)
+
+        password = serializer.validated_data["password1"]
+        user.set_password(password)
+        user.save()
+        return Response(data)
 
 
 class UserListCreateView(BaseAPIView):
@@ -163,3 +224,12 @@ class UserUpdateDeleteView(APIView):
 
         user.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class UserInformationView(APIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = UserSerializer
+
+    def get(self, request):
+        serializer = self.serializer_class(request.user)
+        return Response(serializer.data)

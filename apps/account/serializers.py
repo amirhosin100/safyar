@@ -4,7 +4,8 @@ from django.utils.translation import gettext_lazy as _
 
 from apps.account.choices import UserTypeChoices
 from apps.account.models import User, OwnerRequest
-from apps.core.validations import phone_number_validator, national_code_validator
+from apps.core.validations import phone_number_validator, national_code_validator, password_validator, \
+    validate_verify_code
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from apps.core.captcha import Captcha
@@ -38,14 +39,7 @@ class UserRegisterSerializer(serializers.Serializer):
         password1 = attrs.get('password1')
         password2 = attrs.get('password2')
 
-        if password1 != password2:
-            raise serializers.ValidationError(_("Passwords don't match"))
-
-        try:
-            validate_password(password1)
-        except DjangoValidationError as e:
-            raise serializers.ValidationError("please fix these %s" % str(e.messages))
-
+        password_validator(password1, password2)
         # captcha
         if not Captcha.check_captcha(attrs["captcha_key"], attrs["captcha_value"]):
             raise serializers.ValidationError(
@@ -99,7 +93,7 @@ class UserCreationSerializer(UserDetailSerializer):
     def validate_user_type(self, user_type):
         if user_type not in (UserTypeChoices.ADMIN, UserTypeChoices.NORMAL):
             raise ValidationError(
-                f"you can use these : {UserTypeChoices.ADMIN.value}, {UserTypeChoices.NORMAL.value}"
+                _("you can use these %s %s") % (UserTypeChoices.ADMIN.value, UserTypeChoices.NORMAL.value)
             )
         return user_type
 
@@ -107,7 +101,7 @@ class UserCreationSerializer(UserDetailSerializer):
         try:
             validate_password(password)
         except DjangoValidationError as e:
-            raise serializers.ValidationError("please fix these %s" % str(e.messages))
+            raise serializers.ValidationError(_("please fix these %s") % str(e.messages))
 
         return password
 
@@ -136,3 +130,49 @@ class UserUpdateSerializer(UserCreationSerializer):
         if password:
             self.instance.set_password(password)
         super().save(**kwargs)
+
+
+class SendCodeResetPasswordSerializer(serializers.Serializer):
+    national_code = serializers.CharField(
+        max_length=10, validators=[national_code_validator]
+    )
+    message = serializers.CharField(
+        read_only=True,
+        default=_("Verification code has been sent")
+    )
+
+
+class VerifyCodeSerializer(serializers.Serializer):
+    code = serializers.CharField(max_length=6, write_only=True)
+    national_code = serializers.CharField(max_length=10, validators=[national_code_validator])
+
+    def validate(self, attrs):
+        code = attrs.get('code')
+        national_code = attrs.get('national_code')
+
+        validate_verify_code(national_code, code)
+        return attrs
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    national_code = serializers.CharField(max_length=10, validators=[national_code_validator])
+    code = serializers.CharField(max_length=6, write_only=True)
+    password1 = serializers.CharField(write_only=True)
+    password2 = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        password1 = attrs.get('password1')
+        password2 = attrs.get('password2')
+        national_code = attrs.get('national_code')
+        code = attrs.get('code')
+
+        validate_verify_code(national_code, code)
+        password_validator(password1, password2)
+
+        return attrs
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        exclude = ["password", "groups", "user_permissions"]

@@ -1,0 +1,1 @@
+verify_code = "verify_code:{national_code}"

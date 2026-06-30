@@ -21,7 +21,6 @@ class Captcha:
         image = Image.new('RGB', (width, height), color=bg_color)
         draw = ImageDraw.Draw(image)
 
-
         font = ImageFont.truetype(settings.BASE_DIR / "static/fonts/Vazir-Bold.ttf", size=32)
 
         for i, char in enumerate(text):
@@ -68,4 +67,5 @@ class Captcha:
         value = cache.get(captcha_key)
         if not value or value != text:
             return False
+        cache.delete(captcha_key)
         return True
