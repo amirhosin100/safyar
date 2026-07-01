@@ -19,7 +19,7 @@ from apps.account.serializers import (
     VerifyCodeSerializer, ResetPasswordSerializer, UserSerializer
 )
 from apps.core.base_classes.base_viewset import BaseAPIView
-from apps.core.permissions import IsNotNormalUser
+from apps.core.permissions import IsNotNormalUser, HasBranch, IsSuperUser
 from apps.core.utils.jwt import get_tokens_for_user
 from django.db import IntegrityError
 from django.core.cache import cache
@@ -138,13 +138,15 @@ class ResetPasswordView(APIView):
 
 
 class UserListCreateView(BaseAPIView):
-    permission_classes = (IsNotNormalUser,)
-    serializer_class = UserDetailSerializer
+    permission_classes = (IsSuperUser | IsNotNormalUser & HasBranch,)
+    serializer_class = UserCreationSerializer
     queryset = User.objects.filter(user_type__in=[UserTypeChoices.NORMAL, UserTypeChoices.ADMIN])
 
     def post(self, request):
         serializer = UserCreationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        branch = serializer.validated_data["branch"]
+        self.check_object_permissions(request, branch)
 
         serializer.create(serializer.validated_data)
 
@@ -161,13 +163,12 @@ class UserListCreateView(BaseAPIView):
 
 
 class UserUpdateDeleteView(APIView):
-    permission_classes = (IsNotNormalUser,)
+    permission_classes = (IsSuperUser | IsNotNormalUser & HasBranch)
     serializer_class = UserUpdateSerializer
 
-    @staticmethod
-    def edit(request, user_id, partial):
+    def edit(self, request, user_id, partial):
         try:
-            user = User.objects.get(branch=request.user.branch, user_id=user_id)
+            user = User.objects.get(id=user_id)
         except User.DoesNotExist:
             return Response(
                 data={
@@ -175,13 +176,7 @@ class UserUpdateDeleteView(APIView):
                 },
                 status=status.HTTP_404_NOT_FOUND
             )
-        if request.user.user_type != UserTypeChoices.OWNER and user != request.user:
-            return Response(
-                data={
-                    "detail":_("you don't have change this user")
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
+        self.check_object_permissions(request, user)
 
         serializer = UserUpdateSerializer(data=request.data, instance=user, partial=partial)
         serializer.is_valid(raise_exception=True)
@@ -201,7 +196,7 @@ class UserUpdateDeleteView(APIView):
 
     def delete(self, request, user_id):
         try:
-            user = User.objects.get(branch=request.user.branch, user_id=user_id)
+            user = User.objects.get(user_id=user_id)
         except User.DoesNotExist:
             return Response(
                 data={
@@ -209,6 +204,7 @@ class UserUpdateDeleteView(APIView):
                 },
                 status=status.HTTP_404_NOT_FOUND
             )
+        self.check_object_permissions(request, user)
 
         user.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

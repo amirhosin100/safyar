@@ -64,6 +64,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "national_code",
             "phone_number",
             "user_type",
+            "allowed_branches"
         ]
 
 

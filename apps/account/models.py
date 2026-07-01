@@ -89,7 +89,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     allowed_branches = models.ManyToManyField(
         "smoothing.Branch",
         verbose_name=_("Allowed branches"),
-        related_name="users"
+        related_name="users",
+        blank=True
     )
 
     is_active = models.BooleanField(default=True)

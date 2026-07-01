@@ -9,20 +9,14 @@ class IsSuperUser(permissions.IsAuthenticated):
         return super().has_permission(request, view) and request.user.is_superuser
 
 
-class IsJoinedToSmoothingOrBranch(permissions.BasePermission):
-    def has_object_permission(self, request, view, obj):
-        if request.user and request.user.is_authenticated:
-            if isinstance(obj, Smoothing) and obj.user == request.user:
-                return True
-        return False
 
 
-class IsNotNormalUser(permissions.IsAuthenticated, IsJoinedToSmoothingOrBranch):
+class IsNotNormalUser(permissions.IsAuthenticated):
     def has_permission(self, request, view):
         if super().has_permission(request, view):
             if (
                     request.user.user_type != UserTypeChoices.NORMAL and
-                    hasattr("branch", request.user)
+                    hasattr(request.user, "branch")
             ):
                 return True
         return False

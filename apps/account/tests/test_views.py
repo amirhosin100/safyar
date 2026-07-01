@@ -236,3 +236,78 @@ class TestResetPasswordView:
         assert response.status_code == status.HTTP_200_OK
 
     # TODO write more tests
+
+
+class TestCreateUser:
+    url = reverse("account:user-list-create")
+
+    def create_data(self, branch):
+        return {
+            "full_name": "amir",
+            "branch": branch.id,
+            "national_code": "0987612345",
+            "phone_number": "09876512341",
+            "user_type": UserTypeChoices.NORMAL,
+            "allowed_branches": [],
+            "password": "123456",
+        }
+
+    def test_correct(self, api_client, owner_user):
+        api_client.force_authenticate(user=owner_user)
+        user_count = User.objects.count()
+        data = self.create_data(owner_user.branch)
+        response = api_client.post(self.url, data)
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert User.objects.count() == user_count + 1
+
+    def test_users(self, api_client, owner_user, super_user):
+        for user, count, status_code in ((owner_user, 0, 403), (super_user, 1, 201)):
+            api_client.force_authenticate(user=user)
+            user_count = User.objects.count()
+
+            data = self.create_data(super_user.branch)
+            response = api_client.post(self.url, data)
+
+            assert response.status_code == status_code
+            assert User.objects.count() == user_count + count
+
+    def test_with_admin_user_who_dont_allowed_branch(self, api_client, owner_user, admin_user):
+        api_client.force_authenticate(user=admin_user)
+        admin_user.allowed_branches.clear()
+        user_count = User.objects.count()
+
+        data = self.create_data(owner_user.branch)
+
+        response = api_client.post(self.url, data)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert User.objects.count() == user_count
+
+    def test_by_admin_user_who_joined_branch(self, api_client, admin_user, owner_user):
+        api_client.force_authenticate(user=admin_user)
+        admin_user.allowed_branches.set([owner_user.branch])
+        user_count = User.objects.count()
+
+        data = self.create_data(owner_user.branch)
+
+        response = api_client.post(self.url, data)
+        assert response.status_code == status.HTTP_201_CREATED
+        assert User.objects.count() == user_count + 1
+
+    def test_by_invalid_user(self, api_client, super_user, owner_user):
+        api_client.force_authenticate(user=owner_user)
+        user_count = User.objects.count()
+
+        data = self.create_data(super_user.branch)
+        response = api_client.post(self.url, data)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert User.objects.count() == user_count
+
+    def test_with_anonymous_user(self,api_client,super_user):
+        api_client.force_authenticate(user=None)
+        user_count = User.objects.count()
+
+        data = self.create_data(super_user.branch)
+        response = api_client.post(self.url, data)
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert User.objects.count() == user_count
