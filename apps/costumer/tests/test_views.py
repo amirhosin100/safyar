@@ -35,7 +35,7 @@ class TestCostumerView:
             assert response.status_code == status.HTTP_201_CREATED
             assert response.data["branch"] == user.branch.id
 
-    #TODO write more tests
+    # TODO write more tests
 
 
 class TestCarView:
@@ -46,8 +46,11 @@ class TestCarView:
     def test_correct_list(self, api_client, owner_user, super_user):
         car = car_initial_data.create_object(get_or_create=True)
 
-    def test_create(self, api_client):
+    def test_create(self, api_client, super_user):
         car_create_data.set_up()
+        costumer = Costumer.objects.first()
+        costumer.branch = super_user.branch
+        costumer.save()
         response = api_client.post(
             self.list_create_url,
             data=car_create_data.request_data,
@@ -56,6 +59,3 @@ class TestCarView:
         response = api_client.get(self.list_create_url)
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 1
-
-
-

@@ -25,8 +25,7 @@ class CarViewSet(BaseProtectionViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        costumer_id = serializer.validated_data['costumer']
-        costumer = Costumer.objects.get(costumer_id=costumer_id)
+        costumer = serializer.validated_data['costumer']
         if request.user.branch != costumer.branch:
             return Response(
                 data={"error": "You don't have permission to create car for this customer."},
