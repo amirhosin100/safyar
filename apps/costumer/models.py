@@ -63,3 +63,8 @@ class Car(BaseModel):
 
     def __str__(self):
         return self.plate
+
+
+    @property
+    def branch(self):
+        return self.costumer.branch

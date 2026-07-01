@@ -8,7 +8,8 @@ from rest_framework.relations import ManyRelatedField, PrimaryKeyRelatedField
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
-from apps.core.permissions import HasBranch
+from apps.account.choices import UserTypeChoices
+from apps.core.permissions import HasBranch, IsSuperUser
 from apps.core.utils.filters import (
     CustomFilterSetFilter,
     CustomGroupingFilter,
@@ -71,11 +72,16 @@ class BaseProtectionViewSet(BaseAPIView, ModelViewSet):
 
 
 class FilterByBranchViewSet(BaseProtectionViewSet):
-    permission_classes = (HasBranch,)
-
-    def perform_create(self, serializer):
-        branch = self.request.user.branch
-        serializer.save(branch=branch)
+    permission_classes = (IsSuperUser | HasBranch,)
+    smoothing_prefix = "branch__smoothing"
+    branch_in_prefix = "branch__in"
 
     def get_queryset(self):
-        return self.queryset.filter(branch=self.request.user.branch)
+        if self.request.user.is_superuser:
+            return super().get_queryset()
+
+        query_set = self.queryset.filter(**{self.smoothing_prefix:self.request.user.branch.smoothing})
+        if self.request.user.user_type == UserTypeChoices.OWNER:
+            return query_set
+
+        return query_set.filter(**{self.branch_in_prefix: self.request.user.allowed_branches.all()})

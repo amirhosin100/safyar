@@ -139,7 +139,6 @@ class User(AbstractBaseUser, PermissionsMixin):
                     order=1
                 )
                 self.branch = branch
-
         super().save(*args, **kwargs)
 
 class OwnerRequest(BaseModel):

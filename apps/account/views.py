@@ -19,7 +19,7 @@ from apps.account.serializers import (
     VerifyCodeSerializer, ResetPasswordSerializer, UserSerializer
 )
 from apps.core.base_classes.base_viewset import BaseAPIView
-from apps.core.permissions import IsAdminOrOwner
+from apps.core.permissions import IsNotNormalUser
 from apps.core.utils.jwt import get_tokens_for_user
 from django.db import IntegrityError
 from django.core.cache import cache
@@ -138,7 +138,7 @@ class ResetPasswordView(APIView):
 
 
 class UserListCreateView(BaseAPIView):
-    permission_classes = (IsAdminOrOwner,)
+    permission_classes = (IsNotNormalUser,)
     serializer_class = UserDetailSerializer
     queryset = User.objects.filter(user_type__in=[UserTypeChoices.NORMAL, UserTypeChoices.ADMIN])
 
@@ -161,7 +161,7 @@ class UserListCreateView(BaseAPIView):
 
 
 class UserUpdateDeleteView(APIView):
-    permission_classes = (IsAdminOrOwner,)
+    permission_classes = (IsNotNormalUser,)
     serializer_class = UserUpdateSerializer
 
     @staticmethod

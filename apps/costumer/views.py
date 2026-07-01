@@ -1,8 +1,7 @@
 from rest_framework import status
 from rest_framework.response import Response
 
-from apps.core.base_classes.base_viewset import FilterByBranchViewSet, BaseProtectionViewSet
-from apps.core.permissions import HasBranch
+from apps.core.base_classes.base_viewset import FilterByBranchViewSet
 from apps.costumer.serializers import CostumerSerializer, CarSerializer
 
 from apps.costumer.models import Costumer, Car
@@ -12,26 +11,30 @@ class CostumerViewSet(FilterByBranchViewSet):
     serializer_class = CostumerSerializer
     queryset = Costumer.objects.all()
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-class CarViewSet(BaseProtectionViewSet):
+        branch = serializer.validated_data['branch']
+        self.check_object_permissions(request, branch)
+
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+
+class CarViewSet(FilterByBranchViewSet):
     serializer_class = CarSerializer
     queryset = Car.objects.all()
-    permission_classes = (HasBranch,)
-
-    def get_queryset(self):
-        return self.queryset.filter(costumer__branch=self.request.user.branch)
+    branch_in_prefix = "costumer__branch__in"
+    smoothing_prefix = "costumer__branch__smoothing"
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         costumer = serializer.validated_data['costumer']
-        if request.user.branch != costumer.branch:
-            return Response(
-                data={"error": "You don't have permission to create car for this customer."},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
+        self.check_object_permissions(request, costumer)
         serializer.save()
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)

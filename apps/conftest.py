@@ -9,9 +9,6 @@ from django.conf import settings
 from django.test.utils import override_settings
 from rest_framework.test import APIClient
 
-from apps.smoothing.models import Smoothing
-from apps.smoothing.tests.fixtures.data import smoothing_initial_data
-
 
 @pytest.fixture
 def super_user():
@@ -28,6 +25,16 @@ def owner_user():
         phone_number="09876543210",
         full_name="normal_user",
         user_type=UserTypeChoices.OWNER
+    )
+
+@pytest.fixture
+def admin_user(owner_user):
+    return User.objects.create_user(
+        national_code="0987654381",
+        phone_number="09875543210",
+        full_name="normal_user",
+        user_type=UserTypeChoices.ADMIN,
+        branch=owner_user.branch,
     )
 
 @pytest.fixture

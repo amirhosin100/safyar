@@ -1,7 +1,7 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from apps.core.base_classes.base_viewset import BaseProtectionViewSet, FilterByBranchViewSet
-from apps.core.permissions import IsSuperUser, IsAdminOrOwner, HasBranch
+from apps.core.permissions import IsSuperUser, IsNotNormalUser, HasBranch
 from apps.smoothing.models import Smoothing, Branch, Colleague
 from apps.smoothing.serializers import SmoothingSerializer, BranchSerializer , ColleagueSerializer
 
@@ -15,7 +15,7 @@ class SmoothingViewSet(BaseProtectionViewSet):
 
 class BranchViewSet(BaseProtectionViewSet):
     serializer_class = BranchSerializer
-    permission_classes = (HasBranch,)
+    permission_classes = (HasBranch | IsSuperUser,)
     queryset = Branch.objects.all()
 
     def perform_create(self, serializer):
@@ -23,17 +23,20 @@ class BranchViewSet(BaseProtectionViewSet):
         serializer.save(smoothing=smoothing)
 
     def get_queryset(self):
-        return self.queryset.filter(smoothing=self.request.user.branch.smoothing)
+        return self.queryset.filter(smoothing=self.request.user.smoothing)
 
 
 class ColleagueViewSet(FilterByBranchViewSet):
     serializer_class = ColleagueSerializer
-    permission_classes = (HasBranch,)
+    permission_classes = (HasBranch | IsSuperUser,)
     queryset = Colleague.objects.all()
 
 
 class SmoothingAPIView(APIView):
-    permission_classes = (IsAdminOrOwner,)
+    """
+    for editing smoothing in settings
+    """
+    permission_classes = (IsNotNormalUser,)
     serializer_class = SmoothingSerializer
 
     @staticmethod
@@ -59,7 +62,10 @@ class SmoothingAPIView(APIView):
 
 
 class BranchAPIView(APIView):
-    permission_classes = (IsAdminOrOwner,)
+    """
+    for editing branch in settings
+    """
+    permission_classes = (IsNotNormalUser,)
     serializer_class = BranchSerializer
 
     @staticmethod
