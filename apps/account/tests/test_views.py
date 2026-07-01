@@ -6,7 +6,8 @@ from rest_framework import status
 from apps.account.choices import UserTypeChoices
 from apps.account.models import User, OwnerRequest
 from unittest.mock import patch
-import uuid
+
+from apps.smoothing.models import Smoothing, Branch
 
 pytestmark = pytest.mark.django_db
 
@@ -303,7 +304,7 @@ class TestCreateUser:
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert User.objects.count() == user_count
 
-    def test_with_anonymous_user(self,api_client,super_user):
+    def test_with_anonymous_user(self, api_client, super_user):
         api_client.force_authenticate(user=None)
         user_count = User.objects.count()
 
@@ -311,3 +312,285 @@ class TestCreateUser:
         response = api_client.post(self.url, data)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert User.objects.count() == user_count
+
+
+
+# ── Fixtures ─────────────────────────────────────────────────────────────────
+# owner_user, admin_user, super_user, normal_user, api_client are assumed to
+# already exist in conftest.py (used elsewhere in this file).
+
+@pytest.fixture
+def target_user(owner_user):
+    """A normal user in the same branch as owner_user; the subject of update/delete tests."""
+    return User.objects.create(
+        national_code="5566778899",
+        phone_number="09112223344",
+        full_name="Target User",
+        user_type=UserTypeChoices.NORMAL,
+        branch=owner_user.branch,
+    )
+
+
+@pytest.fixture
+def other_branch_user():
+    """A normal user belonging to a completely separate smoothing/branch."""
+    smoothing = Smoothing.objects.create(
+        phone_number="09199999999",
+        owner_name="Other Owner",
+    )
+    branch = Branch.objects.create(smoothing=smoothing, name="Other Branch", order=1)
+    return User.objects.create(
+        national_code="1122334455",
+        phone_number="09155667788",
+        full_name="Other Branch User",
+        user_type=UserTypeChoices.NORMAL,
+        branch=branch,
+    )
+
+
+class TestUserUpdateDeleteView:
+    """Tests for UserUpdateDeleteView: PUT, PATCH, DELETE."""
+
+    @staticmethod
+    def url(user_id):
+        return reverse("account:user-delete-update", kwargs={"user_id": user_id})
+
+    @staticmethod
+    def _update_data(branch):
+        return {
+            "full_name": "updated name",
+            "branch": branch.id,
+            "national_code": "6677889900",
+            "phone_number": "09223344556",
+            "user_type": UserTypeChoices.NORMAL,
+            "allowed_branches": [],
+        }
+
+    # ── PUT: success cases ──────────────────────────────────────────────────
+    def test_put_by_owner_in_same_branch(self, api_client, owner_user, target_user):
+        api_client.force_authenticate(user=owner_user)
+        data = self._update_data(owner_user.branch)
+        response = api_client.put(self.url(target_user.id), data)
+
+        assert response.status_code == status.HTTP_200_OK
+        target_user.refresh_from_db()
+        assert target_user.full_name == "updated name"
+
+    def test_put_by_super_user(self, api_client, super_user, target_user):
+        api_client.force_authenticate(user=super_user)
+        data = self._update_data(target_user.branch)
+        response = api_client.put(self.url(target_user.id), data)
+
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_put_by_admin_with_allowed_branch(self, api_client, admin_user, target_user):
+        admin_user.allowed_branches.set([target_user.branch])
+        api_client.force_authenticate(user=admin_user)
+        data = self._update_data(target_user.branch)
+        response = api_client.put(self.url(target_user.id), data)
+
+        assert response.status_code == status.HTTP_200_OK
+
+    # ── PUT: permission edge cases ───────────────────────────────────────────
+    def test_put_by_admin_without_allowed_branch_returns_403(self, api_client, admin_user, target_user):
+        admin_user.allowed_branches.clear()
+        api_client.force_authenticate(user=admin_user)
+        data = self._update_data(target_user.branch)
+        response = api_client.put(self.url(target_user.id), data)
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_put_by_owner_on_other_branch_returns_403(self, api_client, owner_user, other_branch_user):
+        api_client.force_authenticate(user=owner_user)
+        data = self._update_data(other_branch_user.branch)
+        response = api_client.put(self.url(other_branch_user.id), data)
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_put_by_normal_user_returns_403(self, api_client, normal_user, target_user):
+        api_client.force_authenticate(user=normal_user)
+        data = self._update_data(target_user.branch)
+        response = api_client.put(self.url(target_user.id), data)
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_put_by_anonymous_returns_401(self, api_client, target_user):
+        api_client.force_authenticate(user=None)
+        data = self._update_data(target_user.branch)
+        response = api_client.put(self.url(target_user.id), data)
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    # ── PUT: not found / validation ──────────────────────────────────────────
+    def test_put_user_not_found_returns_404(self, api_client, super_user):
+        api_client.force_authenticate(user=super_user)
+        data = self._update_data(super_user.branch)
+        response = api_client.put(self.url(999999), data)
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_put_missing_required_field_returns_400(self, api_client, owner_user, target_user):
+        api_client.force_authenticate(user=owner_user)
+        data = self._update_data(owner_user.branch)
+        data.pop("full_name")
+        response = api_client.put(self.url(target_user.id), data)
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_put_invalid_user_type_returns_400(self, api_client, owner_user, target_user):
+        api_client.force_authenticate(user=owner_user)
+        data = self._update_data(owner_user.branch)
+        data["user_type"] = UserTypeChoices.SUPER_USER
+        response = api_client.put(self.url(target_user.id), data)
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    # ── PATCH: partial update ────────────────────────────────────────────────
+    def test_patch_partial_update_by_owner(self, api_client, owner_user, target_user):
+        api_client.force_authenticate(user=owner_user)
+        response = api_client.patch(self.url(target_user.id), {"full_name": "patched name"})
+
+        assert response.status_code == status.HTTP_200_OK
+        target_user.refresh_from_db()
+        assert target_user.full_name == "patched name"
+
+    def test_patch_does_not_require_all_fields(self, api_client, owner_user, target_user):
+        api_client.force_authenticate(user=owner_user)
+        response = api_client.patch(self.url(target_user.id), {"phone_number": "09300001122"})
+
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_patch_by_normal_user_returns_403(self, api_client, normal_user, target_user):
+        api_client.force_authenticate(user=normal_user)
+        response = api_client.patch(self.url(target_user.id), {"full_name": "x"})
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_patch_by_anonymous_returns_401(self, api_client, target_user):
+        api_client.force_authenticate(user=None)
+        response = api_client.patch(self.url(target_user.id), {"full_name": "x"})
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_patch_user_not_found_returns_404(self, api_client, super_user):
+        api_client.force_authenticate(user=super_user)
+        response = api_client.patch(self.url(999999), {"full_name": "x"})
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    # ── DELETE: success cases ────────────────────────────────────────────────
+    def test_delete_by_owner_in_same_branch(self, api_client, owner_user, target_user):
+        api_client.force_authenticate(user=owner_user)
+        user_count = User.objects.count()
+        response = api_client.delete(self.url(target_user.id))
+
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        assert User.objects.count() == user_count - 1
+        assert not User.objects.filter(id=target_user.id).exists()
+
+    def test_delete_by_super_user(self, api_client, super_user, target_user):
+        api_client.force_authenticate(user=super_user)
+        response = api_client.delete(self.url(target_user.id))
+
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    def test_delete_by_admin_with_allowed_branch(self, api_client, admin_user, target_user):
+        admin_user.allowed_branches.set([target_user.branch])
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.delete(self.url(target_user.id))
+
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    # ── DELETE: permission edge cases ────────────────────────────────────────
+    def test_delete_by_admin_without_allowed_branch_returns_403(self, api_client, admin_user, target_user):
+        admin_user.allowed_branches.clear()
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.delete(self.url(target_user.id))
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_delete_by_owner_on_other_branch_returns_403(self, api_client, owner_user, other_branch_user):
+        api_client.force_authenticate(user=owner_user)
+        response = api_client.delete(self.url(other_branch_user.id))
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_delete_by_normal_user_returns_403(self, api_client, normal_user, target_user):
+        api_client.force_authenticate(user=normal_user)
+        response = api_client.delete(self.url(target_user.id))
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_delete_by_anonymous_returns_401(self, api_client, target_user):
+        api_client.force_authenticate(user=None)
+        response = api_client.delete(self.url(target_user.id))
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    # ── DELETE: not found ────────────────────────────────────────────────────
+    def test_delete_user_not_found_returns_404(self, api_client, super_user):
+        api_client.force_authenticate(user=super_user)
+        response = api_client.delete(self.url(999999))
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+class TestUserListView:
+    """Tests for the GET (list) endpoint of UserListCreateView."""
+
+    url = reverse("account:user-list-create")
+
+    # ── Success cases ─────────────────────────────────────────────────────────
+    def test_list_by_owner_returns_users_in_own_branch(self, api_client, owner_user, target_user):
+        api_client.force_authenticate(user=owner_user)
+        response = api_client.get(self.url)
+
+        assert response.status_code == status.HTTP_200_OK
+        returned_codes = [u["national_code"] for u in response.data]
+        assert target_user.national_code in returned_codes
+
+    def test_list_excludes_users_from_other_branches(self, api_client, owner_user, other_branch_user):
+        api_client.force_authenticate(user=owner_user)
+        response = api_client.get(self.url)
+
+        assert response.status_code == status.HTTP_200_OK
+        returned_codes = [u["national_code"] for u in response.data]
+        assert other_branch_user.national_code not in returned_codes
+
+    def test_list_excludes_non_normal_non_admin_users(self, api_client, owner_user, target_user):
+        """UserListCreateView.queryset is filtered to NORMAL and ADMIN user types only."""
+        api_client.force_authenticate(user=owner_user)
+        response = api_client.get(self.url)
+
+        returned_types = {u["user_type"] for u in response.data}
+        assert UserTypeChoices.OWNER not in returned_types
+
+    def test_list_by_admin_returns_users_in_own_branch(self, api_client, admin_user, target_user):
+        target_user.branch = admin_user.branch
+        target_user.save()
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.get(self.url)
+
+        assert response.status_code == status.HTTP_200_OK
+        returned_codes = [u["national_code"] for u in response.data]
+        assert target_user.national_code in returned_codes
+
+    # ── Permission edge cases ────────────────────────────────────────────────
+    def test_list_by_normal_user_returns_403(self, api_client, normal_user):
+        api_client.force_authenticate(user=normal_user)
+        response = api_client.get(self.url)
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_list_by_anonymous_returns_401(self, api_client):
+        api_client.force_authenticate(user=None)
+        response = api_client.get(self.url)
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    # ── Method not allowed ────────────────────────────────────────────────────
+    def test_delete_method_not_allowed(self, api_client, owner_user):
+        api_client.force_authenticate(user=owner_user)
+        response = api_client.delete(self.url)
+
+        assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED

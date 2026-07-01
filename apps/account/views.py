@@ -163,7 +163,7 @@ class UserListCreateView(BaseAPIView):
 
 
 class UserUpdateDeleteView(APIView):
-    permission_classes = (IsSuperUser | IsNotNormalUser & HasBranch)
+    permission_classes = (IsSuperUser | IsNotNormalUser & HasBranch,)
     serializer_class = UserUpdateSerializer
 
     def edit(self, request, user_id, partial):
@@ -196,7 +196,7 @@ class UserUpdateDeleteView(APIView):
 
     def delete(self, request, user_id):
         try:
-            user = User.objects.get(user_id=user_id)
+            user = User.objects.get(id=user_id)
         except User.DoesNotExist:
             return Response(
                 data={
