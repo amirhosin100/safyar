@@ -8,7 +8,6 @@ from apps.core.validations import phone_number_validator, national_code_validato
     validate_verify_code
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
-from apps.core.captcha import Captcha
 
 
 class UserLoginSerializer(serializers.Serializer):
@@ -32,19 +31,12 @@ class UserRegisterSerializer(serializers.Serializer):
     shop_name = serializers.CharField()
     password1 = serializers.CharField(write_only=True)
     password2 = serializers.CharField(write_only=True)
-    captcha_key = serializers.UUIDField(write_only=True)
-    captcha_value = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
         password1 = attrs.get('password1')
         password2 = attrs.get('password2')
 
         password_validator(password1, password2)
-        # captcha
-        if not Captcha.check_captcha(attrs["captcha_key"], attrs["captcha_value"]):
-            raise serializers.ValidationError(
-                _("Your captcha is invalid or expired, please try again.")
-            )
 
         return attrs
 
@@ -61,11 +53,6 @@ class UserRegisterSerializer(serializers.Serializer):
         OwnerRequest.objects.create(user=user)
 
         return user
-
-
-class CaptchaSerializer(serializers.Serializer):
-    captcha_key = serializers.UUIDField()
-    captcha_image = serializers.CharField()
 
 
 class UserDetailSerializer(serializers.ModelSerializer):

@@ -2,7 +2,7 @@ from django.db import models
 from apps.core.models import BaseModel
 from django.utils.translation import gettext_lazy as _
 
-from apps.core.validations import phone_number_validator
+from apps.core.validations import phone_number_validator, plate_validator
 from apps.costumer.choices import GenderChoices
 
 
@@ -34,6 +34,7 @@ class Costumer(BaseModel):
     class Meta:
         verbose_name = _("Costumer")
         verbose_name_plural = _("Costumers")
+        unique_together = (("branch", "phone_number"),)
 
     def __str__(self):
         return self.name
@@ -49,6 +50,7 @@ class Car(BaseModel):
     plate = models.CharField(
         max_length=30,
         verbose_name=_("Plate"),
+        validators=[plate_validator],
     )
     color = models.CharField(
         max_length=30,

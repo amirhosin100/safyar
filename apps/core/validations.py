@@ -14,7 +14,10 @@ national_code_validator = RegexValidator(
     regex=r'^\d{10}$',
     message=_('national code must have 10 characters')
 )
-
+plate_validator = RegexValidator(
+    regex=r'^\d{2}-.-\d{3}-\d{2}$',
+    message=_('plate should like this xx-<letter>-xxx-xx')
+)
 
 def password_validator(password1, password2):
     if password1 != password2:

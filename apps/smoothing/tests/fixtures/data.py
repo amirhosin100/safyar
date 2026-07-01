@@ -2,7 +2,7 @@ from apps.account.tests.fixtures.data import user_initial_data
 from apps.core.tests.image import create_image
 from apps.core.tests.base_test import APIRequestData, InitialData
 from apps.smoothing.choices import SmoothingStatusChoices
-from apps.smoothing.models import Smoothing
+from apps.smoothing.models import Smoothing, Branch
 
 smoothing_initial_data = InitialData(
     Smoothing,
@@ -60,6 +60,16 @@ smoothing_create_data = APIRequestData(
         "user": user_initial_data
     },
     extra_fields=["user", "created_at", "updated_at", "id", "logo"]
+)
+branch_initial_data = InitialData(
+    Branch,
+    {
+        "name": "test",
+        "order": 1,
+    },
+    relation_fields={
+        "smoothing": smoothing_initial_data
+    }
 )
 smoothing_update_data = APIRequestData(
     Smoothing,

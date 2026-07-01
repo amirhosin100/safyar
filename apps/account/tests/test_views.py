@@ -97,30 +97,11 @@ class TestUserLogin:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
-class TestCreateCaptchaView:
-    url = reverse("account:create-captcha")
-
-    def test_correct(self, api_client):
-        response = api_client.post(self.url)
-
-        assert response.status_code == status.HTTP_201_CREATED
-        assert "captcha_key" in response.data
-        assert "captcha_image" in response.data
-
-
-
 class TestRegisterView:
     url = reverse("account:register")
-    captcha_url = reverse("account:create-captcha")
 
-    def _get_captcha(self, api_client):
-        """Creates a real captcha and returns (key, value)."""
-        with patch("apps.core.captcha.Captcha._generate_captcha_text") as mock:
-            mock.return_value = "11111"
-            response = api_client.post(self.captcha_url)
-        return response.data["captcha_key"], "11111"
-
-    def _base_data(self, captcha_key, captcha_value):
+    @staticmethod
+    def _base_data():
         return {
             "full_name": "test name",
             "national_code": "1212880099",
@@ -129,49 +110,17 @@ class TestRegisterView:
             "shop_name": "my shop",
             "password1": "StrongPass@123",
             "password2": "StrongPass@123",
-            "captcha_key": captcha_key,
-            "captcha_value": captcha_value,
         }
 
     # ── Success ──────────────────────────────────────────────────────────────
     def test_correct(self, api_client):
-        key, val = self._get_captcha(api_client)
-        response = api_client.post(self.url, self._base_data(key, val))
+        response = api_client.post(self.url, self._base_data())
 
         assert response.status_code == status.HTTP_201_CREATED
         user = User.objects.get(national_code="1212880099")
         assert not user.is_active
         assert OwnerRequest.objects.filter(user=user).count() == 1
         assert user.user_type == UserTypeChoices.OWNER
-
-    # ── Captcha ────────────────────────────────────────────────────────────────
-    def test_invalid_captcha_value_returns_400(self, api_client):
-        """Wrong captcha value should return 400."""
-        key, _ = self._get_captcha(api_client)
-        data = self._base_data(key, "WRONG")
-        response = api_client.post(self.url, data)
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data["non_field_errors"][0] == 'Your captcha is invalid or expired, please try again.'
-
-    def test_invalid_captcha_key_returns_400(self, api_client):
-        """A fake UUID for captcha_key should return 400."""
-        data = self._base_data(str(uuid.uuid4()), "11111")
-        response = api_client.post(self.url, data)
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data["non_field_errors"][0] == 'Your captcha is invalid or expired, please try again.'
-
-    def test_missing_captcha_returns_400(self, api_client):
-        key, val = self._get_captcha(api_client)
-        data = self._base_data(key, val)
-        data.pop("captcha_key")
-        data.pop("captcha_value")
-        response = api_client.post(self.url, data)
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "captcha_key" in response.data
-        assert "captcha_value" in response.data
 
     # ── Duplicate fields ──────────────────────────────────────────────────────
     def test_duplicate_national_code_returns_400(self, api_client):
@@ -182,8 +131,7 @@ class TestRegisterView:
             full_name="existing user",
             is_active=False,
         )
-        key, val = self._get_captcha(api_client)
-        response = api_client.post(self.url, self._base_data(key, val))
+        response = api_client.post(self.url, self._base_data())
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "error" in response.data
@@ -196,16 +144,14 @@ class TestRegisterView:
             full_name="existing user",
             is_active=False,
         )
-        key, val = self._get_captcha(api_client)
-        response = api_client.post(self.url, self._base_data(key, val))
+        response = api_client.post(self.url, self._base_data())
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "error" in response.data
 
     # ── Field validation ──────────────────────────────────────────────────────
     def test_password_mismatch_returns_400(self, api_client):
-        key, val = self._get_captcha(api_client)
-        data = self._base_data(key, val)
+        data = self._base_data()
         data["password2"] = "DifferentPass@999"
         response = api_client.post(self.url, data)
 
@@ -213,8 +159,7 @@ class TestRegisterView:
 
     def test_invalid_national_code_returns_400(self, api_client):
         """A national code with an invalid format (e.g. fewer than 10 digits) should return 400."""
-        key, val = self._get_captcha(api_client)
-        data = self._base_data(key, val)
+        data = self._base_data()
         data["national_code"] = "123"
         response = api_client.post(self.url, data)
 
@@ -222,8 +167,7 @@ class TestRegisterView:
 
     def test_invalid_phone_number_returns_400(self, api_client):
         """A phone number with an invalid format should return 400."""
-        key, val = self._get_captcha(api_client)
-        data = self._base_data(key, val)
+        data = self._base_data()
         data["phone_number"] = "0912"
         response = api_client.post(self.url, data)
 
@@ -235,8 +179,7 @@ class TestRegisterView:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_missing_shop_name_returns_400(self, api_client):
-        key, val = self._get_captcha(api_client)
-        data = self._base_data(key, val)
+        data = self._base_data()
         data.pop("shop_name")
         response = api_client.post(self.url, data)
 
@@ -250,3 +193,46 @@ class TestRegisterView:
     def test_put_method_not_allowed(self, api_client):
         response = api_client.put(self.url, {})
         assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+
+
+class TestResetPasswordView:
+    verify_code_url = reverse("account:verify-code")
+    reset_password_url = reverse("account:reset-password")
+    send_sms_url = reverse("account:send-sms")
+    login_url = reverse("account:login")
+
+    def test_correct(self, api_client, normal_user):
+        data = {
+            "national_code": normal_user.national_code,
+        }
+        api_client.force_authenticate(user=None)
+        with patch("apps.account.views.random.choices") as mocker_choices:
+            mocker_choices.return_value = "123456"
+            response = api_client.post(self.send_sms_url, data)
+            assert response.status_code == status.HTTP_200_OK
+
+        data["code"] = "123456"
+        response = api_client.post(
+            self.verify_code_url,
+            data=data
+        )
+        assert response.status_code == status.HTTP_200_OK
+        response = api_client.post(
+            self.login_url,
+            data={"national_code": normal_user.national_code, "password": "123456"}
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+        data["password1"] = "123456"
+        data["password2"] = "123456"
+
+        response = api_client.post(self.reset_password_url, data)
+        assert response.status_code == status.HTTP_200_OK
+
+        assert api_client.post(
+            self.login_url,
+            data={"national_code": normal_user.national_code, "password": "123456"}
+        )
+        assert response.status_code == status.HTTP_200_OK
+
+    # TODO write more tests

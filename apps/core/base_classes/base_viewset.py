@@ -1,4 +1,3 @@
-
 from django.db.models import ForeignKey, OneToOneField
 from django.utils import translation
 
@@ -8,6 +7,8 @@ from rest_framework.permissions import DjangoModelPermissions, IsAuthenticated
 from rest_framework.relations import ManyRelatedField, PrimaryKeyRelatedField
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
+
+from apps.core.permissions import HasBranch
 from apps.core.utils.filters import (
     CustomFilterSetFilter,
     CustomGroupingFilter,
@@ -67,3 +68,14 @@ class BaseProtectionViewSet(BaseAPIView, ModelViewSet):
         with translation.override(lang_code):
             schema = build_form_schema(model, serializer)
         return Response(schema)
+
+
+class FilterByBranchViewSet(BaseProtectionViewSet):
+    permission_classes = (HasBranch,)
+
+    def perform_create(self, serializer):
+        branch = self.request.user.branch
+        serializer.save(branch=branch)
+
+    def get_queryset(self):
+        return self.queryset.filter(branch=self.request.user.branch)

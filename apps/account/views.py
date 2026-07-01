@@ -15,7 +15,6 @@ from apps.account.serializers import (
     UserCreationSerializer,
     UserDetailSerializer,
     UserUpdateSerializer,
-    CaptchaSerializer,
     SendCodeResetPasswordSerializer,
     VerifyCodeSerializer, ResetPasswordSerializer, UserSerializer
 )
@@ -23,7 +22,6 @@ from apps.core.base_classes.base_viewset import BaseAPIView
 from apps.core.permissions import IsAdminOrOwner
 from apps.core.utils.jwt import get_tokens_for_user
 from django.db import IntegrityError
-from apps.core.captcha import Captcha
 from django.core.cache import cache
 from django.utils.translation import gettext_lazy as _
 
@@ -39,7 +37,7 @@ class UserLoginView(APIView):
     def user_not_found():
         return Response(
             data={
-                "error": "username or password is incorrect"
+                "error": _("username or password is incorrect")
             },
             status=status.HTTP_404_NOT_FOUND
         )
@@ -79,22 +77,12 @@ class UserRegisterView(APIView):
         except IntegrityError:
             return Response(
                 data={
-                    "error": "you cannot register, because you registered before."
+                    "error": _("you cannot register, because you registered before.")
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-
-class CreateCaptchaView(APIView):
-    permission_classes = (AllowAny,)
-
-    def post(self, request):
-        data = Captcha.create_captcha()
-        serializer = CaptchaSerializer(data=data)
-
-        return Response(serializer.initial_data, status=status.HTTP_201_CREATED)
 
 
 class SendCodeResetPasswordView(APIView):
@@ -114,7 +102,7 @@ class SendCodeResetPasswordView(APIView):
         # TODO remove print and send a real sms
         print(code)
         national_code = user.national_code
-        cache.set(verify_code.format(national_code), code, timeout=60)
+        cache.set(verify_code.format(national_code=national_code), code, timeout=60)
 
         return Response(serializer.data)
 
@@ -183,14 +171,14 @@ class UserUpdateDeleteView(APIView):
         except User.DoesNotExist:
             return Response(
                 data={
-                    "detail": "user not found"
+                    "detail": _("user not found")
                 },
                 status=status.HTTP_404_NOT_FOUND
             )
         if request.user.user_type != UserTypeChoices.OWNER and user != request.user:
             return Response(
                 data={
-                    "you don't have change this user"
+                    "detail":_("you don't have change this user")
                 },
                 status=status.HTTP_403_FORBIDDEN
             )
@@ -217,7 +205,7 @@ class UserUpdateDeleteView(APIView):
         except User.DoesNotExist:
             return Response(
                 data={
-                    "detail": "user not found"
+                    "detail": _("user not found")
                 },
                 status=status.HTTP_404_NOT_FOUND
             )
