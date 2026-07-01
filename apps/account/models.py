@@ -78,6 +78,19 @@ class User(AbstractBaseUser, PermissionsMixin):
         null=True,
         blank=True
     )
+    smoothing = models.ForeignKey(
+        "smoothing.Smoothing",
+        on_delete=models.PROTECT,
+        verbose_name=_("Smoothing"),
+        related_name="owner_user",
+        null=True,
+        blank=True
+    )
+    allowed_branches = models.ManyToManyField(
+        "smoothing.Branch",
+        verbose_name=_("Allowed branches"),
+        related_name="users"
+    )
 
     is_active = models.BooleanField(default=True)
 
@@ -103,14 +116,12 @@ class User(AbstractBaseUser, PermissionsMixin):
             self.user_type = UserTypeChoices.SUPER_USER
             self.is_superuser = True
 
-        super().save(*args, **kwargs)
         # When a user is created, if the type of user is OWNER or SUPERUSER and the user is active
         # It creates Smoothing and empty branch for it
 
         if self.user_type in (UserTypeChoices.OWNER, UserTypeChoices.SUPER_USER) and self.is_active:
-            if not hasattr(self, "smoothing"):
+            if self.smoothing is None:
                 data = {
-                    "user": self,
                     "phone_number": self.phone_number,
                     "owner_name": self.full_name,
                 }
@@ -127,9 +138,9 @@ class User(AbstractBaseUser, PermissionsMixin):
                     name="شعبه ی مرکزی",
                     order=1
                 )
-                self.branch_id = branch.id
-                self.save()
+                self.branch = branch
 
+        super().save(*args, **kwargs)
 
 class OwnerRequest(BaseModel):
     user = models.OneToOneField(

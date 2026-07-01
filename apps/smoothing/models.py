@@ -7,12 +7,6 @@ from apps.smoothing.choices import ClosedDayChoices, OrderChoices, JobTypeChoice
 
 
 class Smoothing(BaseModel):
-    user = models.OneToOneField(
-        "account.User",
-        on_delete=models.CASCADE,
-        related_name="smoothing",
-        verbose_name=_("User"),
-    )
     logo = models.ImageField(
         verbose_name=_("Logo"),
         null=True,

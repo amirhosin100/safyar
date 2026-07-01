@@ -27,10 +27,7 @@ smoothing_initial_data = InitialData(
         "status": SmoothingStatusChoices.ACTIVATED,
         "wallet_stock": 2000,
     },
-    relation_fields={
-        "user": user_initial_data
-    },
-    extra_fields=["user", "created_at", "updated_at", "id", "logo"]
+    extra_fields=["created_at", "updated_at", "id", "logo"]
 )
 
 smoothing_create_data = APIRequestData(
@@ -56,10 +53,7 @@ smoothing_create_data = APIRequestData(
         "status": 0,
         "wallet_stock": 0,
     },
-    relation_fields={
-        "user": user_initial_data
-    },
-    extra_fields=["user", "created_at", "updated_at", "id", "logo"]
+    extra_fields=["created_at", "updated_at", "id", "logo"]
 )
 branch_initial_data = InitialData(
     Branch,
@@ -94,8 +88,5 @@ smoothing_update_data = APIRequestData(
         "status": 1,
         "wallet_stock": 2000,
     },
-    relation_fields={
-        "user": user_initial_data
-    },
-    extra_fields=["user", "created_at", "updated_at", "id", "logo"]
+    extra_fields=[ "created_at", "updated_at", "id", "logo"]
 )
