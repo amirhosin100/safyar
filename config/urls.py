@@ -52,6 +52,7 @@ urlpatterns = [
     path(f"api/{version}/", include("apps.wallet.urls")),
     path(f"api/{version}/", include("apps.smoothing.urls")),
     path(f"api/{version}/", include("apps.account.urls", namespace="account")),
+    path(f"api/{version}/", include("apps.project.urls"), name="project"),
 ]
 
 if settings.DEBUG:
