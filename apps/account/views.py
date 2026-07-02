@@ -1,5 +1,6 @@
 import random
 
+from django.db.models import ProtectedError
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -26,9 +27,9 @@ from django.core.cache import cache
 from django.utils.translation import gettext_lazy as _
 
 from apps.core.utils.prefix import verify_code
+from apps.core.utils.protected_error import show_protected_error
 
 
-# TODO write tests
 class UserLoginView(APIView):
     permission_classes = (AllowAny,)
     serializer_class = UserLoginSerializer
@@ -206,7 +207,11 @@ class UserUpdateDeleteView(APIView):
             )
         self.check_object_permissions(request, user)
 
-        user.delete()
+        try:
+            user.delete()
+        except ProtectedError as e:
+            return show_protected_error(e)
+
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

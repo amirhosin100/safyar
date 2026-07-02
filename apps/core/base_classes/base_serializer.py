@@ -1,9 +1,5 @@
-from collections import Counter
-from typing import Any, Iterator
-
-from django.utils.translation import gettext_lazy as _
 from rest_framework.fields import SerializerMethodField
-from rest_framework.relations import ManyRelatedField, PrimaryKeyRelatedField
+from rest_framework.relations import PrimaryKeyRelatedField
 from rest_framework.serializers import ModelSerializer
 
 

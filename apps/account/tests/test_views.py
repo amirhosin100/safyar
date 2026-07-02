@@ -314,7 +314,6 @@ class TestCreateUser:
         assert User.objects.count() == user_count
 
 
-
 # ── Fixtures ─────────────────────────────────────────────────────────────────
 # owner_user, admin_user, super_user, normal_user, api_client are assumed to
 # already exist in conftest.py (used elsewhere in this file).

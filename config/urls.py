@@ -2,10 +2,9 @@ from django.apps import apps
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.contrib.auth.models import Group
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from apps.core.auto_generator.auto_generator import get_or_create_import_export_viewset, get_or_create_viewset
+from apps.core.auto_generator.auto_generator import get_or_create_viewset
 from apps.core.utils.api_route import get_crud_api_prefix
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -30,12 +29,6 @@ for app_config in apps.get_app_configs():
             basename = f"{app_config.label}-{model._meta.model_name}"
             router.register(prefix, viewset_class, basename=basename)
 
-            ie_viewset_class = get_or_create_import_export_viewset(model)
-            custom_import_export_router.register(
-                prefix,
-                ie_viewset_class,
-                basename=f"custom-{basename}",
-            )
 
         except Exception as e:
             print(f"Skipping {app_config.label}.{model.__name__}: {e}")

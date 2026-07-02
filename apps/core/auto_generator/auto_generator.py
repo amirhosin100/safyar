@@ -3,20 +3,16 @@ from typing import Dict, Type
 
 from django.apps import apps
 from django.conf import settings
-from django.core.exceptions import FieldDoesNotExist
 from django.db.models import Model
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.viewsets import ModelViewSet
 from apps.core.base_classes.base_serializer import BaseModelSerializer, BaseSimpleSerializer
 from apps.core.base_classes.base_viewset import BaseProtectionViewSet
-from apps.core.base_classes.import_export_only_viewset import ImportExportOnlyViewSet
 
 FULL_SERIALIZERS: Dict[str, Type[serializers.ModelSerializer]] = {}
 SIMPLE_SERIALIZERS: Dict[str, Type[serializers.ModelSerializer]] = {}
-EXPORT_SERIALIZERS: Dict[str, Type[serializers.ModelSerializer]] = {}
 VIEWSETS: Dict[str, Type[ModelViewSet]] = {}
-IMPORT_EXPORT_VIEWSETS: Dict[str, Type[ModelViewSet]] = {}
 
 
 def model_key(model: Type[Model]) -> str:
@@ -99,7 +95,6 @@ def save_serializers_from_file(model: Type[Model]) -> bool:
 
     full_serializer = f"{name}Serializer"
     simple_serializer = f"{name}SimpleSerializer"
-    export_serializer = f"{name}ExportSerializer"
 
     try:
         app_serializers = importlib.import_module(f"apps.{app_label}.serializers")
@@ -108,8 +103,6 @@ def save_serializers_from_file(model: Type[Model]) -> bool:
             FULL_SERIALIZERS[key] = getattr(app_serializers, full_serializer)
         if hasattr(app_serializers, simple_serializer):
             SIMPLE_SERIALIZERS[key] = getattr(app_serializers, simple_serializer)
-        if hasattr(app_serializers, export_serializer):
-            EXPORT_SERIALIZERS[key] = getattr(app_serializers, export_serializer)
     except ImportError:
         pass
 
@@ -135,24 +128,6 @@ def get_or_create_viewset(model: Type[Model]) -> Type[ModelViewSet]:
 
     return VIEWSETS[key]
 
-
-def get_or_create_import_export_viewset(model: Type[Model]) -> Type[ModelViewSet]:
-    """Same routes as DynamicViewSet but CRUD endpoints return 404 (custom-api)."""
-    key = f"ie-{model_key(model)}"
-    if key not in IMPORT_EXPORT_VIEWSETS:
-        qs = model._default_manager.all()
-
-        class DynamicImportExportViewSet(ImportExportOnlyViewSet):
-            queryset = qs
-            serializer_model_name = model._meta.object_name
-            ordering_fields = "__all__"
-            ordering = "-id"
-
-        DynamicImportExportViewSet.__name__ = (
-            f"{model._meta.object_name}ImportExportViewSet"
-        )
-        IMPORT_EXPORT_VIEWSETS[key] = DynamicImportExportViewSet
-    return IMPORT_EXPORT_VIEWSETS[key]
 
 
 # ── Optional: Pre-generate everything at startup ─────────────────────────────

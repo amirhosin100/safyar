@@ -19,4 +19,3 @@ class ColleagueSerializer(BaseModelSerializer):
     class Meta:
         model = Colleague
         fields = "__all__"
-        read_only_fields = ["branch"]
