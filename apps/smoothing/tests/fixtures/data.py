@@ -65,6 +65,17 @@ branch_initial_data = InitialData(
         "smoothing": smoothing_initial_data
     }
 )
+branch_create_data = APIRequestData(
+    Branch,
+    {
+        "name": "test 2",
+        "order": 2,
+    },
+    relation_fields={
+        "smoothing": smoothing_create_data
+    }
+)
+
 smoothing_update_data = APIRequestData(
     Smoothing,
     {
@@ -88,5 +99,5 @@ smoothing_update_data = APIRequestData(
         "status": 1,
         "wallet_stock": 2000,
     },
-    extra_fields=[ "created_at", "updated_at", "id", "logo"]
+    extra_fields=["created_at", "updated_at", "id", "logo"]
 )

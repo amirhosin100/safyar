@@ -36,7 +36,7 @@ class HasBranch(permissions.IsAuthenticated):
     def has_object_permission(self, request, view, obj):
         branch = obj if isinstance(obj, Branch) else obj.branch
 
-        if request.user.user_type == UserTypeChoices.OWNER:
+        if request.user.user_type in [UserTypeChoices.OWNER, UserTypeChoices.SUPER_USER]:
             return request.user.smoothing == branch.smoothing
 
         return request.user.allowed_branches.filter(id=branch.id).exists()

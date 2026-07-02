@@ -113,7 +113,7 @@ class Branch(BaseModel):
         verbose_name_plural = _("Branches")
 
     def __str__(self):
-        return f"{self.user.full_name} - {self.name}"
+        return f"{self.smoothing.name} - {self.name}"
 
 
 class Colleague(BaseModel):

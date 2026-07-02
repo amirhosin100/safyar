@@ -15,7 +15,7 @@ class SmoothingViewSet(BaseProtectionViewSet):
 
 class BranchViewSet(BaseProtectionViewSet):
     serializer_class = BranchSerializer
-    permission_classes = (HasBranch | IsSuperUser,)
+    permission_classes = (HasBranch & IsNotNormalUser,)
     queryset = Branch.objects.all()
 
     def perform_create(self, serializer):
@@ -23,7 +23,7 @@ class BranchViewSet(BaseProtectionViewSet):
         serializer.save(smoothing=smoothing)
 
     def get_queryset(self):
-        return self.queryset.filter(smoothing=self.request.user.smoothing)
+        return self.queryset.filter(smoothing=self.request.user.branch.smoothing)
 
 
 class ColleagueViewSet(FilterByBranchViewSet):
@@ -55,10 +55,10 @@ class SmoothingAPIView(APIView):
         return Response(serializer.data)
 
     def put(self, request):
-        self.edit(request, partial=False)
+        return self.edit(request, partial=False)
 
     def patch(self, request):
-        self.edit(request, partial=True)
+        return self.edit(request, partial=True)
 
 
 class BranchAPIView(APIView):
@@ -84,7 +84,7 @@ class BranchAPIView(APIView):
         return Response(serializer.data)
 
     def put(self, request):
-        self.edit(request, partial=False)
+        return self.edit(request, partial=False)
 
     def patch(self, request):
-        self.edit(request, partial=True)
+        return self.edit(request, partial=True)
