@@ -4,15 +4,17 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.core.base_classes.base_viewset import BaseProtectionViewSet
+from apps.core.permissions import HasBranch, IsSuperUser
 from apps.project.models import Project, MainPart, ProjectImage, FixItem
 from apps.project.serializers import ProjectSerializer, FixItemSerializer
 from django.utils.translation import gettext_lazy as _
 
 
+# TODO write some tests for these
 class ProjectViewSet(BaseProtectionViewSet):
-    queryset = Project.objects.all()
+    queryset = Project.objects.prefetch_related("items")
     serializer_class = ProjectSerializer
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated & HasBranch | IsSuperUser,)
 
     def get_queryset(self):
         if self.request.user.is_superuser:
@@ -20,16 +22,12 @@ class ProjectViewSet(BaseProtectionViewSet):
 
         return self.queryset.filter(smoothing=self.request.user.branch.smoothing)
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+    def perform_create(self, serializer):
         car = serializer.validated_data['car']
-        if car.branch.smoothing != request.user.branch.smoothing:
+        user = serializer.context['request'].user
+        if car.branch.smoothing != user.branch.smoothing and not user.is_superuser:
             raise PermissionDenied(_("You don't have permission to create project for this car"))
-
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        serializer.save()
 
 
 class ProjectImageViewSet(BaseProtectionViewSet):

@@ -9,7 +9,7 @@ class FixItemSerializer(serializers.ModelSerializer):
 
 
 class ProjectSerializer(serializers.ModelSerializer):
-    fix_items = FixItemSerializer(many=True, read_only=True)
+    items = FixItemSerializer(many=True, read_only=True)
 
     class Meta:
         model = Project
@@ -24,7 +24,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "turn_time",
             "status",
             "fee",
-            "fix_items",
+            "items",
         ]
 
 

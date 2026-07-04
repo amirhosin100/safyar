@@ -1,7 +1,6 @@
 from pathlib import Path
 import os
 
-from django.conf.global_settings import AUTH_USER_MODEL, MEDIA_ROOT
 from dotenv import load_dotenv
 from datetime import timedelta
 

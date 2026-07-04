@@ -107,6 +107,18 @@ class Branch(BaseModel):
         null=True,
         blank=True
     )
+    address = models.TextField(
+        max_length=1000,
+        verbose_name=_("Address"),
+        null=True,
+        blank=True
+    )
+    call_number = models.CharField(
+        max_length=15,
+        verbose_name=_("Call Number"),
+        null=True,
+        blank=True
+    )
 
     class Meta:
         verbose_name = _("Branch")
