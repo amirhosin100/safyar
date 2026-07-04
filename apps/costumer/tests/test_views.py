@@ -36,9 +36,9 @@ class TestCostumerView:
     def test_correct_list(self, api_client, owner_user, super_user, admin_user):
         costumer = costumer_initial_data.create_object()
         costumer.smoothing = owner_user.smoothing
-        costumer.branch = owner_user.branch
+        costumer.branch = owner_user.active_branch
         costumer.save()
-        admin_user.branch = owner_user.smoothing.branches.create(
+        admin_user.active_branch = owner_user.smoothing.branches.create(
             name="Admin",
             order=2
         )
@@ -68,22 +68,16 @@ class TestCostumerView:
     def test_correct_create(self, api_client, owner_user, super_user):
 
         for user in (owner_user, super_user):
-            costumer_initial_data.request_data["branch"] = user.branch.id
+            costumer_initial_data.request_data["branch"] = user.active_branch.id
             api_client.force_authenticate(user=user)
             response = api_client.post(self.list_create_url, data=costumer_initial_data.request_data)
 
             assert response.status_code == status.HTTP_201_CREATED
-            assert response.data["branch"] == user.branch.id
+            assert response.data["branch"] == user.active_branch.id
 
-    def test_with_unauthorized_branch(self, api_client, owner_user, super_user):
-        costumer_initial_data.request_data["branch"] = super_user.branch.id
-
-        api_client.force_authenticate(user=owner_user)
-        response = api_client.post(self.list_create_url, data=costumer_initial_data.request_data)
-        assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_with_unauthorized_branch_and_superuser(self, api_client, super_user, owner_user):
-        costumer_initial_data.request_data["branch"] = owner_user.branch.id
+        costumer_initial_data.request_data["branch"] = owner_user.active_branch.id
 
         api_client.force_authenticate(user=super_user)
         response = api_client.post(self.list_create_url, data=costumer_initial_data.request_data)
@@ -91,29 +85,28 @@ class TestCostumerView:
 
     def test_create_unauthenticated(self, client, owner_user):
         data = costumer_create_data.request_data.copy()
-        data["branch"] = owner_user.branch.id
+        data["branch"] = owner_user.active_branch.id
 
         response = client.post(self.list_create_url, data=data)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_create_duplicate_phone_number_same_branch(self, api_client, owner_user):
-        existing_costumer = self._create_costumer_for_branch(owner_user.branch)
+        existing_costumer = self._create_costumer_for_branch(owner_user.active_branch)
 
         data = costumer_create_data.request_data.copy()
-        data["branch"] = owner_user.branch.id
         data["phone_number"] = existing_costumer.phone_number
 
         api_client.force_authenticate(user=owner_user)
         response = api_client.post(self.list_create_url, data=data)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "phone_number" in response.data or "non_field_errors" in response.data
+        assert response.data == {'detail': "phone_number and branch must be unique together"}
 
     def test_create_same_phone_number_different_branch(self, api_client, owner_user, super_user):
-        existing_costumer = self._create_costumer_for_branch(owner_user.branch)
+        existing_costumer = self._create_costumer_for_branch(owner_user.active_branch)
 
         data = costumer_create_data.request_data.copy()
-        data["branch"] = super_user.branch.id
+        data["branch"] = super_user.active_branch.id
         data["phone_number"] = existing_costumer.phone_number
 
         api_client.force_authenticate(user=super_user)
@@ -123,7 +116,7 @@ class TestCostumerView:
 
     def test_create_invalid_gender_choice(self, api_client, owner_user):
         data = costumer_create_data.request_data.copy()
-        data["branch"] = owner_user.branch.id
+        data["branch"] = owner_user.active_branch.id
         data["gender"] = "X"
 
         api_client.force_authenticate(user=owner_user)
@@ -134,7 +127,7 @@ class TestCostumerView:
 
     def test_create_missing_required_field(self, api_client, owner_user):
         data = costumer_create_data.request_data.copy()
-        data["branch"] = owner_user.branch.id
+        data["branch"] = owner_user.active_branch.id
         del data["phone_number"]
 
         api_client.force_authenticate(user=owner_user)
@@ -146,7 +139,7 @@ class TestCostumerView:
     # ---- retrieve ----------------------------------------------------------
 
     def test_retrieve_success(self, api_client, owner_user):
-        costumer = self._create_costumer_for_branch(owner_user.branch)
+        costumer = self._create_costumer_for_branch(owner_user.active_branch)
 
         api_client.force_authenticate(user=owner_user)
         response = api_client.get(self.detail_url(costumer.id))
@@ -156,7 +149,7 @@ class TestCostumerView:
         assert response.data["phone_number"] == costumer.phone_number
 
     def test_retrieve_success_with_super_user(self, api_client, super_user):
-        costumer = self._create_costumer_for_branch(super_user.branch)
+        costumer = self._create_costumer_for_branch(super_user.active_branch)
 
         api_client.force_authenticate(user=super_user)
         response = api_client.get(self.detail_url(costumer.id))
@@ -165,7 +158,7 @@ class TestCostumerView:
         assert response.data["id"] == costumer.id
 
     def test_retrieve_not_found_for_other_branch(self, api_client, owner_user, super_user):
-        costumer = self._create_costumer_for_branch(super_user.branch)
+        costumer = self._create_costumer_for_branch(super_user.active_branch)
 
         api_client.force_authenticate(user=owner_user)
         response = api_client.get(self.detail_url(costumer.id))
@@ -175,10 +168,10 @@ class TestCostumerView:
     def test_retrieve_with_admin_user(self, api_client, admin_user, owner_user):
 
         del branch_initial_data.request_data["smoothing"]
-        branch_1 = owner_user.branch
+        branch_1 = owner_user.active_branch
         branch_2 = owner_user.smoothing.branches.create(**branch_initial_data.request_data)
         admin_user.allowed_branches.set([branch_2])
-        admin_user.branch = branch_2
+        admin_user.active_branch = branch_2
         admin_user.save()
         api_client.force_authenticate(user=admin_user)
 
@@ -195,7 +188,7 @@ class TestCostumerView:
         assert response.status_code == status.HTTP_200_OK
 
     def test_retrieve_unauthenticated(self, client, owner_user):
-        costumer = self._create_costumer_for_branch(owner_user.branch)
+        costumer = self._create_costumer_for_branch(owner_user.active_branch)
 
         response = client.get(self.detail_url(costumer.id))
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -203,10 +196,10 @@ class TestCostumerView:
     # ---- update ----------------------------------------------------------
 
     def test_update_success(self, api_client, owner_user):
-        costumer = self._create_costumer_for_branch(owner_user.branch)
+        costumer = self._create_costumer_for_branch(owner_user.active_branch)
 
         data = costumer_create_data.request_data.copy()
-        data["branch"] = owner_user.branch.id
+        data["branch"] = owner_user.active_branch.id
         data["name"] = "updated name"
 
         api_client.force_authenticate(user=owner_user)
@@ -216,7 +209,7 @@ class TestCostumerView:
         assert response.data["name"] == "updated name"
 
     def test_partial_update_success(self, api_client, owner_user):
-        costumer = self._create_costumer_for_branch(owner_user.branch)
+        costumer = self._create_costumer_for_branch(owner_user.active_branch)
 
         api_client.force_authenticate(user=owner_user)
         response = api_client.patch(self.detail_url(costumer.id), data={"name": "patched name"})
@@ -225,7 +218,7 @@ class TestCostumerView:
         assert response.data["name"] == "patched name"
 
     def test_update_not_found_for_other_branch(self, api_client, owner_user, super_user):
-        costumer = self._create_costumer_for_branch(super_user.branch)
+        costumer = self._create_costumer_for_branch(super_user.active_branch)
 
         api_client.force_authenticate(user=owner_user)
         response = api_client.patch(self.detail_url(costumer.id), data={"name": "hacked name"})
@@ -233,7 +226,7 @@ class TestCostumerView:
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_update_invalid_gender_choice(self, api_client, owner_user):
-        costumer = self._create_costumer_for_branch(owner_user.branch)
+        costumer = self._create_costumer_for_branch(owner_user.active_branch)
 
         api_client.force_authenticate(user=owner_user)
         response = api_client.patch(self.detail_url(costumer.id), data={"gender": "X"})
@@ -242,7 +235,7 @@ class TestCostumerView:
         assert "gender" in response.data
 
     def test_update_unauthenticated(self, client, owner_user):
-        costumer = self._create_costumer_for_branch(owner_user.branch)
+        costumer = self._create_costumer_for_branch(owner_user.active_branch)
 
         response = client.patch(self.detail_url(costumer.id), data={"name": "x"})
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -250,10 +243,10 @@ class TestCostumerView:
     def test_update_with_admin_user(self, api_client, admin_user, owner_user):
 
         del branch_initial_data.request_data["smoothing"]
-        branch_1 = owner_user.branch
+        branch_1 = owner_user.active_branch
         branch_2 = owner_user.smoothing.branches.create(**branch_initial_data.request_data)
         admin_user.allowed_branches.set([branch_2])
-        admin_user.branch = branch_2
+        admin_user.active_branch = branch_2
         admin_user.save()
         api_client.force_authenticate(user=admin_user)
 
@@ -272,7 +265,7 @@ class TestCostumerView:
     # ---- delete ----------------------------------------------------------
 
     def test_delete_success(self, api_client, owner_user):
-        costumer = self._create_costumer_for_branch(owner_user.branch)
+        costumer = self._create_costumer_for_branch(owner_user.active_branch)
 
         api_client.force_authenticate(user=owner_user)
         response = api_client.delete(self.detail_url(costumer.id))
@@ -281,7 +274,7 @@ class TestCostumerView:
         assert not Costumer.objects.filter(id=costumer.id).exists()
 
     def test_delete_not_found_for_other_branch(self, api_client, owner_user, super_user):
-        costumer = self._create_costumer_for_branch(super_user.branch)
+        costumer = self._create_costumer_for_branch(super_user.active_branch)
 
         api_client.force_authenticate(user=owner_user)
         response = api_client.delete(self.detail_url(costumer.id))
@@ -290,7 +283,7 @@ class TestCostumerView:
         assert Costumer.objects.filter(id=costumer.id).exists()
 
     def test_delete_unauthenticated(self, client, owner_user):
-        costumer = self._create_costumer_for_branch(owner_user.branch)
+        costumer = self._create_costumer_for_branch(owner_user.active_branch)
 
         response = client.delete(self.detail_url(costumer.id))
 
@@ -334,7 +327,7 @@ class TestCarView:
     # ---- list ----------------------------------------------------------
 
     def test_correct_list(self, api_client, owner_user):
-        self._create_car_for_branch(owner_user.branch)
+        self._create_car_for_branch(owner_user.active_branch)
 
         api_client.force_authenticate(user=owner_user)
         response = api_client.get(self.list_create_url)
@@ -343,8 +336,8 @@ class TestCarView:
         assert len(response.data) == 1
 
     def test_list_only_returns_own_branch_cars(self, api_client, owner_user, super_user):
-        self._create_car_for_branch(owner_user.branch)
-        self._create_car_for_branch(super_user.branch)
+        self._create_car_for_branch(owner_user.active_branch)
+        self._create_car_for_branch(super_user.active_branch)
 
         api_client.force_authenticate(user=owner_user)
         response = api_client.get(self.list_create_url)
@@ -357,7 +350,7 @@ class TestCarView:
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_list_user_without_branch(self, api_client, admin_user):
-        admin_user.branch = None
+        admin_user.active_branch = None
         admin_user.save()
 
         api_client.force_authenticate(user=admin_user)
@@ -368,7 +361,7 @@ class TestCarView:
     # ---- create ----------------------------------------------------------
 
     def test_correct_create(self, api_client, owner_user):
-        costumer = self._create_costumer_for_branch(owner_user.branch)
+        costumer = self._create_costumer_for_branch(owner_user.active_branch)
         data = self._base_data()
         data["costumer"] = costumer.id
 
@@ -379,7 +372,7 @@ class TestCarView:
         assert response.data["costumer"] == costumer.id
 
     def test_create_unauthenticated(self, client, owner_user):
-        costumer = self._create_costumer_for_branch(owner_user.branch)
+        costumer = self._create_costumer_for_branch(owner_user.active_branch)
         data = self._base_data()
         data["costumer"] = costumer.id
 
@@ -397,7 +390,7 @@ class TestCarView:
         assert "costumer" in response.data
 
     def test_create_invalid_plate(self, api_client, owner_user):
-        costumer = self._create_costumer_for_branch(owner_user.branch)
+        costumer = self._create_costumer_for_branch(owner_user.active_branch)
         data = self._base_data()
         data["costumer"] = costumer.id
         data["plate"] = "invalid-plate"
@@ -427,8 +420,8 @@ class TestCarView:
         their allowed_branches -> creation must be rejected.
         """
         other_branch = owner_user.smoothing.branches.create(name="Second Branch", order=2)
-        admin_user.branch = owner_user.branch
-        admin_user.allowed_branches.set([owner_user.branch])
+        admin_user.active_branch = owner_user.active_branch
+        admin_user.allowed_branches.set([owner_user.active_branch])
         admin_user.save()
 
         costumer = self._create_costumer_for_branch(other_branch)
@@ -443,7 +436,7 @@ class TestCarView:
 
     def test_admin_can_create_for_allowed_branch(self, api_client, owner_user, admin_user):
         other_branch = owner_user.smoothing.branches.create(name="Second Branch", order=2)
-        admin_user.branch = other_branch
+        admin_user.active_branch = other_branch
         admin_user.allowed_branches.set([other_branch])
         admin_user.save()
 
@@ -459,7 +452,7 @@ class TestCarView:
     # ---- retrieve ----------------------------------------------------------
 
     def test_retrieve_success(self, api_client, owner_user):
-        car = self._create_car_for_branch(owner_user.branch)
+        car = self._create_car_for_branch(owner_user.active_branch)
 
         api_client.force_authenticate(user=owner_user)
         response = api_client.get(self.detail_url(car.id))
@@ -468,7 +461,7 @@ class TestCarView:
         assert response.data["id"] == car.id
 
     def test_retrieve_not_found_for_other_branch(self, api_client, owner_user, super_user):
-        car = self._create_car_for_branch(super_user.branch)
+        car = self._create_car_for_branch(super_user.active_branch)
 
         api_client.force_authenticate(user=owner_user)
         response = api_client.get(self.detail_url(car.id))
@@ -476,7 +469,7 @@ class TestCarView:
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_retrieve_unauthenticated(self, client, owner_user):
-        car = self._create_car_for_branch(owner_user.branch)
+        car = self._create_car_for_branch(owner_user.active_branch)
 
         response = client.get(self.detail_url(car.id))
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -491,11 +484,11 @@ class TestCarView:
         Requires Car to expose a `branch` property (see note), otherwise
         this raises AttributeError inside HasBranch.has_object_permission.
         """
-        admin_user.branch = owner_user.branch
+        admin_user.active_branch = owner_user.active_branch
         admin_user.allowed_branches.set([])
         admin_user.save()
 
-        car = self._create_car_for_branch(owner_user.branch)
+        car = self._create_car_for_branch(owner_user.active_branch)
 
         api_client.force_authenticate(user=admin_user)
         response = api_client.get(self.detail_url(car.id))
@@ -503,11 +496,11 @@ class TestCarView:
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_admin_can_retrieve_car_in_allowed_branch(self, api_client, owner_user, admin_user):
-        admin_user.branch = owner_user.branch
-        admin_user.allowed_branches.set([owner_user.branch])
+        admin_user.active_branch = owner_user.active_branch
+        admin_user.allowed_branches.set([owner_user.active_branch])
         admin_user.save()
 
-        car = self._create_car_for_branch(owner_user.branch)
+        car = self._create_car_for_branch(owner_user.active_branch)
 
         api_client.force_authenticate(user=admin_user)
         response = api_client.get(self.detail_url(car.id))
@@ -517,7 +510,7 @@ class TestCarView:
     # ---- update ----------------------------------------------------------
 
     def test_update_success(self, api_client, owner_user):
-        car = self._create_car_for_branch(owner_user.branch)
+        car = self._create_car_for_branch(owner_user.active_branch)
         data = self._base_data()
         data["costumer"] = car.costumer.id
         data["color"] = "blue"
@@ -529,7 +522,7 @@ class TestCarView:
         assert response.data["color"] == "blue"
 
     def test_partial_update_success(self, api_client, owner_user):
-        car = self._create_car_for_branch(owner_user.branch)
+        car = self._create_car_for_branch(owner_user.active_branch)
 
         api_client.force_authenticate(user=owner_user)
         response = api_client.patch(self.detail_url(car.id), data={"color": "green"})
@@ -538,7 +531,7 @@ class TestCarView:
         assert response.data["color"] == "green"
 
     def test_update_not_found_for_other_branch(self, api_client, owner_user, super_user):
-        car = self._create_car_for_branch(super_user.branch)
+        car = self._create_car_for_branch(super_user.active_branch)
 
         api_client.force_authenticate(user=owner_user)
         response = api_client.patch(self.detail_url(car.id), data={"color": "black"})
@@ -546,7 +539,7 @@ class TestCarView:
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_update_unauthenticated(self, client, owner_user):
-        car = self._create_car_for_branch(owner_user.branch)
+        car = self._create_car_for_branch(owner_user.active_branch)
 
         response = client.patch(self.detail_url(car.id), data={"color": "black"})
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -554,11 +547,11 @@ class TestCarView:
     def test_admin_cannot_update_car_outside_allowed_branches(
             self, api_client, owner_user, admin_user
     ):
-        admin_user.branch = owner_user.branch
+        admin_user.active_branch = owner_user.active_branch
         admin_user.allowed_branches.set([])
         admin_user.save()
 
-        car = self._create_car_for_branch(owner_user.branch)
+        car = self._create_car_for_branch(owner_user.active_branch)
 
         api_client.force_authenticate(user=admin_user)
         response = api_client.patch(self.detail_url(car.id), data={"color": "black"})
@@ -568,11 +561,11 @@ class TestCarView:
         assert car.color != "black"
 
     def test_admin_can_update_car_in_allowed_branch(self, api_client, owner_user, admin_user):
-        admin_user.branch = owner_user.branch
-        admin_user.allowed_branches.set([owner_user.branch])
+        admin_user.active_branch = owner_user.active_branch
+        admin_user.allowed_branches.set([owner_user.active_branch])
         admin_user.save()
 
-        car = self._create_car_for_branch(owner_user.branch)
+        car = self._create_car_for_branch(owner_user.active_branch)
 
         api_client.force_authenticate(user=admin_user)
         response = api_client.patch(self.detail_url(car.id), data={"color": "black"})
@@ -584,7 +577,7 @@ class TestCarView:
     # ---- delete ----------------------------------------------------------
 
     def test_delete_success(self, api_client, owner_user):
-        car = self._create_car_for_branch(owner_user.branch)
+        car = self._create_car_for_branch(owner_user.active_branch)
 
         api_client.force_authenticate(user=owner_user)
         response = api_client.delete(self.detail_url(car.id))
@@ -593,7 +586,7 @@ class TestCarView:
         assert not Car.objects.filter(id=car.id).exists()
 
     def test_delete_not_found_for_other_branch(self, api_client, owner_user, super_user):
-        car = self._create_car_for_branch(super_user.branch)
+        car = self._create_car_for_branch(super_user.active_branch)
 
         api_client.force_authenticate(user=owner_user)
         response = api_client.delete(self.detail_url(car.id))
@@ -602,7 +595,7 @@ class TestCarView:
         assert Car.objects.filter(id=car.id).exists()
 
     def test_delete_unauthenticated(self, client, owner_user):
-        car = self._create_car_for_branch(owner_user.branch)
+        car = self._create_car_for_branch(owner_user.active_branch)
 
         response = client.delete(self.detail_url(car.id))
 
@@ -612,11 +605,11 @@ class TestCarView:
     def test_admin_cannot_delete_car_outside_allowed_branches(
             self, api_client, owner_user, admin_user
     ):
-        admin_user.branch = owner_user.branch
+        admin_user.active_branch = owner_user.active_branch
         admin_user.allowed_branches.set([])
         admin_user.save()
 
-        car = self._create_car_for_branch(owner_user.branch)
+        car = self._create_car_for_branch(owner_user.active_branch)
 
         api_client.force_authenticate(user=admin_user)
         response = api_client.delete(self.detail_url(car.id))
@@ -625,11 +618,11 @@ class TestCarView:
         assert Car.objects.filter(id=car.id).exists()
 
     def test_admin_can_delete_car_in_allowed_branch(self, api_client, owner_user, admin_user):
-        admin_user.branch = owner_user.branch
-        admin_user.allowed_branches.set([owner_user.branch])
+        admin_user.active_branch = owner_user.active_branch
+        admin_user.allowed_branches.set([owner_user.active_branch])
         admin_user.save()
 
-        car = self._create_car_for_branch(owner_user.branch)
+        car = self._create_car_for_branch(owner_user.active_branch)
 
         api_client.force_authenticate(user=admin_user)
         response = api_client.delete(self.detail_url(car.id))

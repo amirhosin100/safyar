@@ -37,7 +37,7 @@ class TestWalletTransactionListView:
         owner_user.smoothing.wallet.transactions.create(**wallet_transaction_initial_data.request_data)
         super_user.smoothing.wallet.transactions.create(**wallet_transaction_initial_data.request_data)
 
-        assert owner_user.branch is not None
+        assert owner_user.active_branch is not None
         for user in (owner_user, super_user):
             api_client.force_authenticate(user=user)
             response = api_client.get(self.url + "?page=1")
@@ -52,13 +52,14 @@ class TestWalletTransactionListView:
         api_client.force_authenticate(user=normal_user)
         response = api_client.get(self.url + "?page=1")
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["count"] == 0
 
     def test_with_user_who_joined_branch(self, normal_user, owner_user, api_client, super_user):
         owner_user.smoothing.wallet.transactions.create(**wallet_transaction_initial_data.request_data)
         transcation = super_user.smoothing.wallet.transactions.create(**wallet_transaction_initial_data.request_data)
 
-        normal_user.branch = super_user.branch
+        normal_user.active_branch = super_user.active_branch
         normal_user.save()
 
         api_client.force_authenticate(user=normal_user)

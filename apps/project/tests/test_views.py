@@ -12,10 +12,10 @@ class TestProjectView(BaseTestView):
         car = car_initial_data.create_object()
         for user in (owner_user, admin_user, normal_user):
             api_client.force_authenticate(user=user)
-            user.branch = owner_user.branch
-            user.branch.save()
+            user.active_branch = owner_user.active_branch
+            user.active_branch.save()
 
-            car.costumer.branch = owner_user.branch
+            car.costumer.branch = owner_user.active_branch
             car.costumer.save()
 
             self.create_data.request_data["car"] = car.id
@@ -24,7 +24,7 @@ class TestProjectView(BaseTestView):
 
     def test_with_other_users(self, api_client, owner_user, normal_user, super_user):
         car = car_initial_data.create_object()
-        car.costumer.branch = owner_user.branch
+        car.costumer.branch = owner_user.active_branch
         car.costumer.save()
         for user, status_code in ((normal_user, 403), (super_user, 201)):
             api_client.force_authenticate(user)
@@ -39,8 +39,8 @@ class TestProjectView(BaseTestView):
 
         for user in (owner_user, admin_user, normal_user):
             api_client.force_authenticate(user=user)
-            user.branch = owner_user.branch
-            user.branch.save()
+            user.active_branch = owner_user.active_branch
+            user.active_branch.save()
 
             self.update_data.request_data["kilometre_of_car"] = 123
             response = api_client.patch(self.detail_update_delete_url(project.pk), data=self.update_data.request_data)

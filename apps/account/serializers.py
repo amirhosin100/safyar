@@ -9,6 +9,8 @@ from apps.core.validations import phone_number_validator, national_code_validato
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 
+from apps.smoothing.models import Branch
+
 
 class UserLoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
@@ -56,15 +58,19 @@ class UserRegisterSerializer(serializers.Serializer):
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
+    active_branch = serializers.PrimaryKeyRelatedField(
+        queryset=Branch.objects.all(),
+        required=True
+    )
     class Meta:
         model = User
         fields = [
             "full_name",
-            "branch",
             "national_code",
             "phone_number",
             "user_type",
-            "allowed_branches"
+            "allowed_branches",
+            "active_branch",
         ]
 
 
@@ -96,7 +102,7 @@ class UserCreationSerializer(UserDetailSerializer):
     def create(self, validated_data):
         user = User(
             full_name=validated_data["full_name"],
-            branch=validated_data["branch"],
+            active_branch=validated_data["active_branch"],
             national_code=validated_data["national_code"],
             phone_number=validated_data["phone_number"],
             user_type=validated_data["user_type"],

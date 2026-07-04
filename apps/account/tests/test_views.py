@@ -15,9 +15,9 @@ LOGIN_URL = reverse("account:login")
 
 
 @pytest.fixture
-def active_user():
+def active_user(create_user):
     """An active user with a known password"""
-    user = User.objects.create(
+    user = create_user(
         national_code="3748291650",
         phone_number="09121234567",
         full_name="Test User",
@@ -29,9 +29,9 @@ def active_user():
 
 
 @pytest.fixture
-def inactive_user():
+def inactive_user(create_user):
     """An inactive user"""
-    user = User.objects.create(
+    user = create_user(
         national_code="6082947315",
         phone_number="09129876543",
         full_name="Inactive User",
@@ -124,9 +124,9 @@ class TestRegisterView:
         assert user.user_type == UserTypeChoices.OWNER
 
     # ── Duplicate fields ──────────────────────────────────────────────────────
-    def test_duplicate_national_code_returns_400(self, api_client):
+    def test_duplicate_national_code_returns_400(self, api_client,create_user):
         """Registering again with the same national code should return 400."""
-        User.objects.create(
+        create_user(
             national_code="1212880099",
             phone_number="09100000000",
             full_name="existing user",
@@ -137,9 +137,9 @@ class TestRegisterView:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "error" in response.data
 
-    def test_duplicate_phone_number_returns_400(self, api_client):
+    def test_duplicate_phone_number_returns_400(self, api_client,normal_user,create_user):
         """Registering with a duplicate phone number should return 400."""
-        User.objects.create(
+        create_user(
             national_code="9999999999",
             phone_number="09823567890",  # same number as base_data
             full_name="existing user",
@@ -245,18 +245,18 @@ class TestCreateUser:
     def create_data(self, branch):
         return {
             "full_name": "amir",
-            "branch": branch.id,
+            "active_branch": branch.id,
             "national_code": "0987612345",
             "phone_number": "09876512341",
             "user_type": UserTypeChoices.NORMAL,
-            "allowed_branches": [],
+            "allowed_branches": [branch.id],
             "password": "123456",
         }
 
     def test_correct(self, api_client, owner_user):
         api_client.force_authenticate(user=owner_user)
         user_count = User.objects.count()
-        data = self.create_data(owner_user.branch)
+        data = self.create_data(owner_user.active_branch)
         response = api_client.post(self.url, data)
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -267,7 +267,7 @@ class TestCreateUser:
             api_client.force_authenticate(user=user)
             user_count = User.objects.count()
 
-            data = self.create_data(super_user.branch)
+            data = self.create_data(super_user.active_branch)
             response = api_client.post(self.url, data)
 
             assert response.status_code == status_code
@@ -278,7 +278,7 @@ class TestCreateUser:
         admin_user.allowed_branches.clear()
         user_count = User.objects.count()
 
-        data = self.create_data(owner_user.branch)
+        data = self.create_data(owner_user.active_branch)
 
         response = api_client.post(self.url, data)
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -286,10 +286,10 @@ class TestCreateUser:
 
     def test_by_admin_user_who_joined_branch(self, api_client, admin_user, owner_user):
         api_client.force_authenticate(user=admin_user)
-        admin_user.allowed_branches.set([owner_user.branch])
+        admin_user.allowed_branches.set([owner_user.active_branch])
         user_count = User.objects.count()
 
-        data = self.create_data(owner_user.branch)
+        data = self.create_data(owner_user.active_branch)
 
         response = api_client.post(self.url, data)
         assert response.status_code == status.HTTP_201_CREATED
@@ -299,7 +299,7 @@ class TestCreateUser:
         api_client.force_authenticate(user=owner_user)
         user_count = User.objects.count()
 
-        data = self.create_data(super_user.branch)
+        data = self.create_data(super_user.active_branch)
         response = api_client.post(self.url, data)
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert User.objects.count() == user_count
@@ -308,7 +308,7 @@ class TestCreateUser:
         api_client.force_authenticate(user=None)
         user_count = User.objects.count()
 
-        data = self.create_data(super_user.branch)
+        data = self.create_data(super_user.active_branch)
         response = api_client.post(self.url, data)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert User.objects.count() == user_count
@@ -321,13 +321,15 @@ class TestCreateUser:
 @pytest.fixture
 def target_user(owner_user):
     """A normal user in the same branch as owner_user; the subject of update/delete tests."""
-    return User.objects.create(
+    user = User.objects.create(
         national_code="5566778899",
         phone_number="09112223344",
         full_name="Target User",
         user_type=UserTypeChoices.NORMAL,
-        branch=owner_user.branch,
+        active_branch=owner_user.smoothing.branches.first(),
     )
+    user.allowed_branches.add(owner_user.smoothing.branches.first())
+    return user
 
 
 @pytest.fixture
@@ -338,13 +340,16 @@ def other_branch_user():
         owner_name="Other Owner",
     )
     branch = Branch.objects.create(smoothing=smoothing, name="Other Branch", order=1)
-    return User.objects.create(
+    user = User.objects.create(
         national_code="1122334455",
         phone_number="09155667788",
         full_name="Other Branch User",
         user_type=UserTypeChoices.NORMAL,
-        branch=branch,
+        active_branch=branch,
     )
+    user.allowed_branches.add(branch)
+    return user
+
 
 
 class TestUserUpdateDeleteView:
@@ -358,17 +363,17 @@ class TestUserUpdateDeleteView:
     def _update_data(branch):
         return {
             "full_name": "updated name",
-            "branch": branch.id,
+            "active_branch": branch.id,
             "national_code": "6677889900",
             "phone_number": "09223344556",
             "user_type": UserTypeChoices.NORMAL,
-            "allowed_branches": [],
+            "allowed_branches": [branch.id],
         }
 
     # ── PUT: success cases ──────────────────────────────────────────────────
     def test_put_by_owner_in_same_branch(self, api_client, owner_user, target_user):
         api_client.force_authenticate(user=owner_user)
-        data = self._update_data(owner_user.branch)
+        data = self._update_data(owner_user.active_branch)
         response = api_client.put(self.url(target_user.id), data)
 
         assert response.status_code == status.HTTP_200_OK
@@ -377,15 +382,15 @@ class TestUserUpdateDeleteView:
 
     def test_put_by_super_user(self, api_client, super_user, target_user):
         api_client.force_authenticate(user=super_user)
-        data = self._update_data(target_user.branch)
+        data = self._update_data(target_user.active_branch)
         response = api_client.put(self.url(target_user.id), data)
 
         assert response.status_code == status.HTTP_200_OK
 
     def test_put_by_admin_with_allowed_branch(self, api_client, admin_user, target_user):
-        admin_user.allowed_branches.set([target_user.branch])
+        admin_user.allowed_branches.set([target_user.active_branch])
         api_client.force_authenticate(user=admin_user)
-        data = self._update_data(target_user.branch)
+        data = self._update_data(target_user.active_branch)
         response = api_client.put(self.url(target_user.id), data)
 
         assert response.status_code == status.HTTP_200_OK
@@ -394,28 +399,28 @@ class TestUserUpdateDeleteView:
     def test_put_by_admin_without_allowed_branch_returns_403(self, api_client, admin_user, target_user):
         admin_user.allowed_branches.clear()
         api_client.force_authenticate(user=admin_user)
-        data = self._update_data(target_user.branch)
+        data = self._update_data(target_user.active_branch)
         response = api_client.put(self.url(target_user.id), data)
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_put_by_owner_on_other_branch_returns_403(self, api_client, owner_user, other_branch_user):
         api_client.force_authenticate(user=owner_user)
-        data = self._update_data(other_branch_user.branch)
+        data = self._update_data(other_branch_user.active_branch)
         response = api_client.put(self.url(other_branch_user.id), data)
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_put_by_normal_user_returns_403(self, api_client, normal_user, target_user):
         api_client.force_authenticate(user=normal_user)
-        data = self._update_data(target_user.branch)
+        data = self._update_data(target_user.active_branch)
         response = api_client.put(self.url(target_user.id), data)
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_put_by_anonymous_returns_401(self, api_client, target_user):
         api_client.force_authenticate(user=None)
-        data = self._update_data(target_user.branch)
+        data = self._update_data(target_user.active_branch)
         response = api_client.put(self.url(target_user.id), data)
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -423,14 +428,14 @@ class TestUserUpdateDeleteView:
     # ── PUT: not found / validation ──────────────────────────────────────────
     def test_put_user_not_found_returns_404(self, api_client, super_user):
         api_client.force_authenticate(user=super_user)
-        data = self._update_data(super_user.branch)
+        data = self._update_data(super_user.active_branch)
         response = api_client.put(self.url(999999), data)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_put_missing_required_field_returns_400(self, api_client, owner_user, target_user):
         api_client.force_authenticate(user=owner_user)
-        data = self._update_data(owner_user.branch)
+        data = self._update_data(owner_user.active_branch)
         data.pop("full_name")
         response = api_client.put(self.url(target_user.id), data)
 
@@ -438,7 +443,7 @@ class TestUserUpdateDeleteView:
 
     def test_put_invalid_user_type_returns_400(self, api_client, owner_user, target_user):
         api_client.force_authenticate(user=owner_user)
-        data = self._update_data(owner_user.branch)
+        data = self._update_data(owner_user.active_branch)
         data["user_type"] = UserTypeChoices.SUPER_USER
         response = api_client.put(self.url(target_user.id), data)
 
@@ -494,7 +499,7 @@ class TestUserUpdateDeleteView:
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
     def test_delete_by_admin_with_allowed_branch(self, api_client, admin_user, target_user):
-        admin_user.allowed_branches.set([target_user.branch])
+        admin_user.allowed_branches.set([target_user.active_branch])
         api_client.force_authenticate(user=admin_user)
         response = api_client.delete(self.url(target_user.id))
 
@@ -565,7 +570,7 @@ class TestUserListView:
         assert UserTypeChoices.OWNER not in returned_types
 
     def test_list_by_admin_returns_users_in_own_branch(self, api_client, admin_user, target_user):
-        target_user.branch = admin_user.branch
+        target_user.active_branch = admin_user.active_branch
         target_user.save()
         api_client.force_authenticate(user=admin_user)
         response = api_client.get(self.url)

@@ -71,13 +71,6 @@ class User(AbstractBaseUser, PermissionsMixin):
         default=UserTypeChoices.NORMAL,
         verbose_name=_("User type"),
     )
-    branch = models.ForeignKey(
-        "smoothing.Branch",
-        on_delete=models.PROTECT,
-        verbose_name=_("Branch"),
-        null=True,
-        blank=True
-    )
     smoothing = models.ForeignKey(
         "smoothing.Smoothing",
         on_delete=models.PROTECT,
@@ -90,7 +83,14 @@ class User(AbstractBaseUser, PermissionsMixin):
         "smoothing.Branch",
         verbose_name=_("Allowed branches"),
         related_name="users",
-        blank=True
+        null=False,
+    )
+    active_branch = models.ForeignKey(
+        "smoothing.Branch",
+        on_delete=models.PROTECT,
+        verbose_name=_("Active branch"),
+        null=True,
+        blank=True,
     )
 
     is_active = models.BooleanField(default=True)
@@ -133,14 +133,8 @@ class User(AbstractBaseUser, PermissionsMixin):
                 smoothing = Smoothing.objects.create(**data)
                 self.smoothing = smoothing
 
-            if self.branch is None:
-                branch = Branch.objects.create(
-                    smoothing=self.smoothing,
-                    name="شعبه ی مرکزی",
-                    order=1
-                )
-                self.branch = branch
         super().save(*args, **kwargs)
+
 
 class OwnerRequest(BaseModel):
     user = models.OneToOneField(

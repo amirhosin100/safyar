@@ -88,9 +88,9 @@ class FilterByBranchViewSet(BaseProtectionViewSet):
 
     def get_queryset(self):
         if self.request.user.is_superuser:
-            return super().get_queryset()
+            return self.queryset
 
-        query_set = self.queryset.filter(**{self.smoothing_prefix:self.request.user.branch.smoothing})
+        query_set = self.queryset.filter(**{self.smoothing_prefix:self.request.user.active_branch.smoothing})
         if self.request.user.user_type == UserTypeChoices.OWNER:
             return query_set
 

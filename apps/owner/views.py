@@ -25,6 +25,7 @@ class VersionViewSet(viewsets.ModelViewSet):
 
 class SupportInformationView(views.APIView):
     permission_classes = (IsSuperUser,)
+    serializer_class = SupportInformationSerializer
 
     @staticmethod
     def edit(request, partial):

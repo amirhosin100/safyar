@@ -146,7 +146,8 @@ class UserListCreateView(BaseAPIView):
     def post(self, request):
         serializer = UserCreationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        branch = serializer.validated_data["branch"]
+        # add a permission which check allow_branches
+        branch = serializer.validated_data["active_branch"]
         self.check_object_permissions(request, branch)
 
         serializer.create(serializer.validated_data)
@@ -157,7 +158,10 @@ class UserListCreateView(BaseAPIView):
         )
 
     def get(self, request):
-        users = self.queryset.filter(branch=request.user.branch)
+        users = self.queryset.filter(
+            active_branch__isnull=False,
+            active_branch__smoothing=request.user.active_branch.smoothing
+        )
         serializer = UserDetailSerializer(users, many=True)
 
         return Response(serializer.data)

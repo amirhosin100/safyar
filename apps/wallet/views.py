@@ -29,7 +29,7 @@ class WalletTransactionListView(ListAPIView, BaseAPIView):
     queryset = WalletTransaction.objects.select_related("wallet__smoothing")
 
     def get_queryset(self):
-        smoothing = self.request.user.branch.smoothing
+        smoothing = self.request.user.active_branch.smoothing
         return self.queryset.filter(wallet__smoothing=smoothing)
 
 
@@ -39,7 +39,7 @@ class WalletTransactionRetrieveView(RetrieveAPIView, BaseAPIView):
     queryset = WalletTransaction.objects.select_related("wallet__smoothing")
 
     def get_queryset(self):
-        smoothing = self.request.user.branch.smoothing
+        smoothing = self.request.user.active_branch.smoothing
         return self.queryset.filter(wallet__smoothing=smoothing)
 
 

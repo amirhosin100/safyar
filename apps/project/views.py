@@ -20,12 +20,12 @@ class ProjectViewSet(BaseProtectionViewSet):
         if self.request.user.is_superuser:
             return self.queryset
 
-        return self.queryset.filter(smoothing=self.request.user.branch.smoothing)
+        return self.queryset.filter(smoothing=self.request.user.active_branch.smoothing)
 
     def perform_create(self, serializer):
         car = serializer.validated_data['car']
         user = serializer.context['request'].user
-        if car.branch.smoothing != user.branch.smoothing and not user.is_superuser:
+        if car.branch.smoothing != user.active_branch.smoothing and not user.is_superuser:
             raise PermissionDenied(_("You don't have permission to create project for this car"))
         serializer.save()
 
@@ -38,7 +38,7 @@ class ProjectImageViewSet(BaseProtectionViewSet):
     def get_queryset(self):
         if self.request.user.is_superuser:
             return self.queryset
-        return self.queryset.filter(project__smoothing=self.request.user.branch.smoothing)
+        return self.queryset.filter(project__smoothing=self.request.user.active_branch.smoothing)
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -60,13 +60,13 @@ class FixItemViewSet(BaseProtectionViewSet):
     def get_queryset(self):
         if self.request.user.is_superuser:
             return self.queryset
-        return self.queryset.filter(project__smoothing=self.request.user.branch.smoothing)
+        return self.queryset.filter(project__smoothing=self.request.user.active_branch.smoothing)
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         project = serializer.validated_data['project']
-        if project.smoothing != request.user.branch.smoothing:
+        if project.smoothing != request.user.active_branch.smoothing:
             raise PermissionDenied(_("You don't have permission to create FixItem for this Project"))
 
         self.perform_create(serializer)
