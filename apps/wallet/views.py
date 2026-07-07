@@ -1,15 +1,17 @@
 from rest_framework import status
 from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.permissions import HasBranch, IsSuperUser
 from apps.core.base_classes.base_viewset import BaseAPIView
 from apps.core.utils.pagination import OptionalPageNumberPagination
+from apps.wallet.choices import TransactionStatusChoices, TransactionTypeChoices
 from apps.wallet.models import WalletTransaction, Wallet
 from apps.wallet.serializers import (
     WalletTransactionSuperUserSerializer,
-    WalletTransactionSerializer, AddStockWalletSerializer
+    WalletTransactionSerializer, AddStockWalletSerializer, ChargeWalletSerializer
 )
 
 
@@ -61,8 +63,27 @@ class AddStockWalletView(APIView):
         serializer = AddStockWalletSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        wallet.stock += serializer.validated_data["amount"]
+        amount = serializer.validated_data["amount"]
+        wallet.stock += amount
         wallet.save()
+        wallet.transactions.create(
+            amount=amount,
+            status=TransactionStatusChoices.SUCCESS,
+            transaction_type=TransactionTypeChoices.SETTLE,
+            description="واریز  کیف پول توسط ادمین",
+        )
 
         res_serializer = AddStockWalletSerializer(instance=wallet)
         return Response(res_serializer.data)
+
+
+class ChargeWalletView(APIView):
+    # TODO edit this
+    permission_classes = (IsAuthenticated,)
+    serializer_class = ChargeWalletSerializer
+
+    def post(self,request):
+        serializer = ChargeWalletSerializer(request.data)
+        serializer.is_valid(raise_exception=True)
+
+        return Response(serializer.data)

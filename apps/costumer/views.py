@@ -24,8 +24,7 @@ class CostumerViewSet(FilterByBranchViewSet):
 class CarViewSet(FilterByBranchViewSet):
     serializer_class = CarSerializer
     queryset = Car.objects.all()
-    branch_in_prefix = "costumer__branch__in"
-    smoothing_prefix = "costumer__branch__smoothing"
+    branch_prefix = "costumer__branch"
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

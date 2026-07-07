@@ -2,12 +2,12 @@ from django.db import models
 from rest_framework.exceptions import ValidationError
 
 from apps.account.choices import OwnerRequestChoices, UserTypeChoices
+from apps.account.creation import create_smoothing
 from apps.core.models import BaseManager, BaseModel
-from django.contrib.auth.models import BaseUserManager, AbstractBaseUser, PermissionsMixin
+from django.contrib.auth.models import BaseUserManager, AbstractBaseUser, PermissionsMixin, AbstractUser
 from django.utils.translation import gettext_lazy as _
 
 from apps.core.validations import phone_number_validator, national_code_validator
-from apps.smoothing.models import Smoothing, Branch
 
 
 class UserManager(BaseUserManager, BaseManager):
@@ -71,7 +71,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         default=UserTypeChoices.NORMAL,
         verbose_name=_("User type"),
     )
-    smoothing = models.ForeignKey(
+    smoothing = models.OneToOneField(
         "smoothing.Smoothing",
         on_delete=models.PROTECT,
         verbose_name=_("Smoothing"),
@@ -83,7 +83,6 @@ class User(AbstractBaseUser, PermissionsMixin):
         "smoothing.Branch",
         verbose_name=_("Allowed branches"),
         related_name="users",
-        null=False,
     )
     active_branch = models.ForeignKey(
         "smoothing.Branch",
@@ -121,19 +120,16 @@ class User(AbstractBaseUser, PermissionsMixin):
         # It creates Smoothing and empty branch for it
 
         if self.user_type in (UserTypeChoices.OWNER, UserTypeChoices.SUPER_USER) and self.is_active:
-            if self.smoothing is None:
-                data = {
-                    "phone_number": self.phone_number,
-                    "owner_name": self.full_name,
-                }
-                if hasattr(self, "request"):
-                    data["address"] = self.request.address
-                    data["name"] = self.request.shop_name
-
-                smoothing = Smoothing.objects.create(**data)
-                self.smoothing = smoothing
+            create_smoothing(self)
 
         super().save(*args, **kwargs)
+        if self.smoothing:
+            self.allowed_branches.set(self.smoothing.branches.all())
+
+        first_branch = self.allowed_branches.first()
+        if self.active_branch is None and first_branch is not None:
+            self.active_branch = first_branch
+            self.save()
 
 
 class OwnerRequest(BaseModel):

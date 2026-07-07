@@ -42,3 +42,7 @@ class AddStockWalletSerializer(serializers.ModelSerializer):
             raise ValidationError("Amount must be greater then zero")
 
         return amount
+
+
+class ChargeWalletSerializer(serializers.Serializer):
+    amount = serializers.BigIntegerField()

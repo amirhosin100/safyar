@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from apps.core.base_classes.base_viewset import BaseProtectionViewSet
 from apps.core.permissions import HasBranch, IsSuperUser
 from apps.project.models import Project, MainPart, ProjectImage, FixItem
-from apps.project.serializers import ProjectSerializer, FixItemSerializer
+from apps.project.serializers import ProjectSerializer, FixItemSerializer, MainPartSerializer
 from django.utils.translation import gettext_lazy as _
 
 
@@ -14,13 +14,10 @@ from django.utils.translation import gettext_lazy as _
 class ProjectViewSet(BaseProtectionViewSet):
     queryset = Project.objects.prefetch_related("items")
     serializer_class = ProjectSerializer
-    permission_classes = (IsAuthenticated & HasBranch | IsSuperUser,)
+    permission_classes = (HasBranch,)
 
     def get_queryset(self):
-        if self.request.user.is_superuser:
-            return self.queryset
-
-        return self.queryset.filter(smoothing=self.request.user.active_branch.smoothing)
+        return self.queryset.filter(branch__in=self.request.user.allowed_branches.all())
 
     def perform_create(self, serializer):
         car = serializer.validated_data['car']
@@ -76,5 +73,5 @@ class FixItemViewSet(BaseProtectionViewSet):
 
 class MainPartListView(generics.ListAPIView):
     queryset = MainPart.objects.prefetch_related("areas")
-    serializer_class = ProjectSerializer
+    serializer_class = MainPartSerializer
     permission_classes = (IsAuthenticated,)

@@ -5,7 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from apps.account.choices import UserTypeChoices
 from apps.account.models import User, OwnerRequest
 from apps.core.validations import phone_number_validator, national_code_validator, password_validator, \
-    validate_verify_code
+    validate_verify_code, delete_verify_code
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 
@@ -62,6 +62,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
         queryset=Branch.objects.all(),
         required=True
     )
+
     class Meta:
         model = User
         fields = [
@@ -162,6 +163,7 @@ class ResetPasswordSerializer(serializers.Serializer):
 
         validate_verify_code(national_code, code)
         password_validator(password1, password2)
+        delete_verify_code(national_code)
 
         return attrs
 

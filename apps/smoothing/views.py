@@ -1,9 +1,11 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from apps.account.choices import UserTypeChoices
 from apps.core.base_classes.base_viewset import BaseProtectionViewSet, FilterByBranchViewSet
-from apps.core.permissions import IsSuperUser, IsNotNormalUser, HasBranch
+from apps.core.permissions import IsSuperUser, IsNotNormalUser, HasBranch, IsOwner, IsOwnerOrSuperUser
 from apps.smoothing.models import Smoothing, Branch, Colleague
-from apps.smoothing.serializers import SmoothingSerializer, BranchSerializer , ColleagueSerializer
+from apps.smoothing.serializers import SmoothingSerializer, BranchSerializer, ColleagueSerializer
 
 
 # TODO write tests for these
@@ -23,25 +25,28 @@ class BranchViewSet(BaseProtectionViewSet):
         serializer.save(smoothing=smoothing)
 
     def get_queryset(self):
-        return self.queryset.filter(smoothing=self.request.user.active_branch.smoothing)
+        return self.queryset.filter(pk__in=self.request.user.allowed_branches.values_list("pk", flat=True))
 
 
-class ColleagueViewSet(FilterByBranchViewSet):
+class ColleagueViewSet(BaseProtectionViewSet):
     serializer_class = ColleagueSerializer
     permission_classes = (HasBranch | IsSuperUser,)
     queryset = Colleague.objects.all()
+
+    def get_queryset(self):
+        return self.queryset.filter(branch__in=self.request.user.allowed_branches.values_list("pk", flat=True))
 
 
 class SmoothingAPIView(APIView):
     """
     for editing smoothing in settings
     """
-    permission_classes = (IsNotNormalUser,)
+    permission_classes = (IsOwner,)
     serializer_class = SmoothingSerializer
 
     @staticmethod
     def edit(request, partial):
-        smoothing = request.user.active_branch.smoothing
+        smoothing = request.user.smoothing
 
         serializer = SmoothingSerializer(instance=smoothing, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
@@ -50,7 +55,7 @@ class SmoothingAPIView(APIView):
         return Response(serializer.data)
 
     def get(self, request):
-        smoothing = request.user.active_branch.smoothing
+        smoothing = request.user.smoothing
         serializer = SmoothingSerializer(instance=smoothing)
         return Response(serializer.data)
 

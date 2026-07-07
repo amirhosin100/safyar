@@ -255,3 +255,6 @@ class BaseTestModel(BaseTest):
     @pytest.fixture(autouse=True)
     def initialize_data(self):
         super().initialize_data()
+        urls = self.get_urls(self.model)
+        self.detail_update_delete_url = urls[0]
+        self.list_create_url = urls[1]

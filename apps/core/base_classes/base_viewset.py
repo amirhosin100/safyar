@@ -83,15 +83,7 @@ class BaseProtectionViewSet(BaseAPIView, ModelViewSet):
 
 class FilterByBranchViewSet(BaseProtectionViewSet):
     permission_classes = (IsSuperUser | HasBranch,)
-    smoothing_prefix = "branch__smoothing"
-    branch_in_prefix = "branch__in"
+    branch_prefix = "branch"
 
     def get_queryset(self):
-        if self.request.user.is_superuser:
-            return self.queryset
-
-        query_set = self.queryset.filter(**{self.smoothing_prefix:self.request.user.active_branch.smoothing})
-        if self.request.user.user_type == UserTypeChoices.OWNER:
-            return query_set
-
-        return query_set.filter(**{self.branch_in_prefix: self.request.user.allowed_branches.all()})
+        return self.queryset.filter(**{self.branch_prefix: self.request.user.active_branch})

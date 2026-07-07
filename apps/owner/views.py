@@ -48,6 +48,6 @@ class SupportInformationView(views.APIView):
 
 
 class UserOwnerViewSet(BaseProtectionViewSet):
-    queryset = User.objects.filter(user_type=UserTypeChoices.OWNER)
+    queryset = User.objects.all()
     serializer_class = UserOwnerSerializer
     permission_classes = (IsSuperUser,)

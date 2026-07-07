@@ -35,3 +35,6 @@ def validate_verify_code(national_code, code):
         raise serializers.ValidationError(_("code is invalid or expired"))
 
     return True
+
+def delete_verify_code(national_code):
+    cache.delete(prefix.verify_code.format(national_code=national_code))

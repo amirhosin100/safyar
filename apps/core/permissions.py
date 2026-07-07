@@ -10,6 +10,19 @@ class IsSuperUser(permissions.IsAuthenticated):
         return super().has_permission(request, view) and request.user.is_superuser
 
 
+class IsOwner(permissions.IsAuthenticated):
+    def has_permission(self, request, view):
+        return super().has_permission(request, view) and request.user.user_type == UserTypeChoices.OWNER
+
+
+class IsOwnerOrSuperUser(permissions.IsAuthenticated):
+    def has_permission(self, request, view):
+        if super().has_permission(request, view):
+            if request.user.user_type in [UserTypeChoices.OWNER,UserTypeChoices.SUPER_USER]:
+                return True
+        return False
+
+
 class IsNotNormalUser(permissions.IsAuthenticated):
     def has_permission(self, request, view):
         if super().has_permission(request, view):

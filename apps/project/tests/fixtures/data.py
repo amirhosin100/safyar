@@ -2,6 +2,7 @@ from apps.core.tests.base_test import InitialData, APIRequestData
 from apps.costumer.tests.fixtures.data import car_initial_data
 from apps.project.choices import FuelTypeChoices, ProjectStatusChoices
 from apps.project.models import Project
+from apps.smoothing.tests.fixtures.data import branch_initial_data
 
 project_initial_data = InitialData(
     Project,
@@ -20,7 +21,8 @@ project_initial_data = InitialData(
         "fee": 100,
     },
     relation_fields={
-        "car": car_initial_data
+        "car": car_initial_data,
+        "branch": branch_initial_data
     },
     extra_fields=["car", "branch", "smoothing", "created_at","items", "id"],
 )
@@ -40,7 +42,8 @@ project_create_data = APIRequestData(
         "status": ProjectStatusChoices.TURNED.value,
     },
     relation_fields={
-        "car": car_initial_data
+        "car": car_initial_data,
+        "branch": branch_initial_data
     },
     extra_fields=["car", "branch", "smoothing", "created_at", "items", "id", "fee"],
 )

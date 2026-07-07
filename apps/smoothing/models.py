@@ -66,6 +66,13 @@ class Smoothing(BaseModel):
 
         super().save(*args, **kwargs)
 
+        if self.branches.count() == 0:
+            Branch.objects.create(
+                name="شعبه مرکزی",
+                smoothing=self,
+                order=1,
+            )
+
 
 class Branch(BaseModel):
     smoothing = models.ForeignKey(
@@ -125,7 +132,7 @@ class Branch(BaseModel):
         verbose_name_plural = _("Branches")
 
     def __str__(self):
-        return f"{self.smoothing.name} - {self.name}"
+        return f"{str(self.smoothing)} - {self.name}"
 
 
 class Colleague(BaseModel):

@@ -45,7 +45,8 @@ class TestCostumerView:
         admin_user.allowed_branches.set([])
         admin_user.save()
 
-        for user, count in ((owner_user, 1), (super_user, 1), (admin_user, 0)):
+        #even superuser get nothing
+        for user, count in ((owner_user, 1), (super_user, 0), (admin_user, 0)):
             api_client.force_authenticate(user=user)
 
             response = api_client.get(self.list_create_url)
@@ -57,7 +58,7 @@ class TestCostumerView:
 
         response = api_client.get(self.list_create_url)
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == 1
+        assert len(response.data) == 0
 
     def test_list_unauthenticated(self, client):
         response = client.get(self.list_create_url)
@@ -477,13 +478,7 @@ class TestCarView:
     def test_admin_cannot_retrieve_car_outside_allowed_branches(
             self, api_client, owner_user, admin_user
     ):
-        """
-        Admin's own branch matches the car's branch (so it passes the
-        queryset filter) but the branch is missing from allowed_branches ->
-        object-level permission must still block access.
-        Requires Car to expose a `branch` property (see note), otherwise
-        this raises AttributeError inside HasBranch.has_object_permission.
-        """
+
         admin_user.active_branch = owner_user.active_branch
         admin_user.allowed_branches.set([])
         admin_user.save()
@@ -493,7 +488,7 @@ class TestCarView:
         api_client.force_authenticate(user=admin_user)
         response = api_client.get(self.detail_url(car.id))
 
-        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_admin_can_retrieve_car_in_allowed_branch(self, api_client, owner_user, admin_user):
         admin_user.active_branch = owner_user.active_branch
@@ -556,13 +551,14 @@ class TestCarView:
         api_client.force_authenticate(user=admin_user)
         response = api_client.patch(self.detail_url(car.id), data={"color": "black"})
 
-        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.status_code == status.HTTP_403_FORBIDDEN
         car.refresh_from_db()
         assert car.color != "black"
 
-    def test_admin_can_update_car_in_allowed_branch(self, api_client, owner_user, admin_user):
+    def test_admin_can_update_car_active_branch(self, api_client, owner_user, admin_user):
         admin_user.active_branch = owner_user.active_branch
         admin_user.allowed_branches.set([owner_user.active_branch])
+        admin_user.active_branch = owner_user.active_branch
         admin_user.save()
 
         car = self._create_car_for_branch(owner_user.active_branch)
@@ -614,7 +610,7 @@ class TestCarView:
         api_client.force_authenticate(user=admin_user)
         response = api_client.delete(self.detail_url(car.id))
 
-        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.status_code == status.HTTP_403_FORBIDDEN
         assert Car.objects.filter(id=car.id).exists()
 
     def test_admin_can_delete_car_in_allowed_branch(self, api_client, owner_user, admin_user):

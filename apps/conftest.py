@@ -22,14 +22,18 @@ def create_branch_for_user():
 
 @pytest.fixture
 def create_user(create_branch_for_user):
-    def wrapper(**kwargs):
-        branch = create_branch_for_user()
+    def wrapper(create_branch=True,**kwargs):
+        branch = None
+        if create_branch:
+            branch = create_branch_for_user()
+
         user = User.objects.create_user(
             active_branch=branch,
             **kwargs
         )
-        branch.smoothing = user.smoothing if user.smoothing else branch.smoothing
-        branch.save()
+        if branch:
+            branch.smoothing = user.smoothing if user.smoothing else branch.smoothing
+            branch.save()
 
         return user
     return wrapper
@@ -50,6 +54,7 @@ def super_user(create_user):
 @pytest.fixture
 def owner_user(create_user):
     user = create_user(
+        create_branch=False,
         national_code="0987654321",
         phone_number="09876543210",
         full_name="owner_user",

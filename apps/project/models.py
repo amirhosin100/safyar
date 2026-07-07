@@ -4,6 +4,8 @@ from apps.project.choices import FuelTypeChoices, FixTypeChoices, ProjectStatusC
 
 from django.utils.translation import gettext_lazy as _
 
+from apps.smoothing.models import Branch
+
 
 class Project(BaseModel):
     branch = models.ForeignKey(
@@ -11,7 +13,6 @@ class Project(BaseModel):
         on_delete=models.PROTECT,
         verbose_name=_("Branch"),
         related_name='projects',
-        editable=False,
     )
     smoothing = models.ForeignKey(
         "smoothing.Smoothing",
@@ -63,10 +64,10 @@ class Project(BaseModel):
         return f"{self.car} | {self.created_at}"
 
     def save(self, *args, **kwargs):
-        self.branch = self.car.branch
-        self.smoothing = self.car.branch.smoothing
-
+        branch = Branch.objects.get(id=self.branch_id)
+        self.smoothing = branch.smoothing
         super().save(*args, **kwargs)
+
 
 
 class ProjectImage(models.Model):

@@ -28,6 +28,7 @@ from django.utils.translation import gettext_lazy as _
 
 from apps.core.utils.prefix import verify_code
 from apps.core.utils.protected_error import show_protected_error
+from apps.core.sms import get_sms_class
 
 
 class UserLoginView(APIView):
@@ -97,11 +98,20 @@ class SendCodeResetPasswordView(APIView):
         try:
             user = User.objects.get(national_code=serializer.validated_data["national_code"])
         except User.DoesNotExist:
-            return Response(serializer.data)
+            return Response(
+                {"detail": _("user not found")},
+            )
 
         code = "".join(random.choices("0123456789", k=6))
-        # TODO remove print and send a real sms
         print(code)
+        # TODO fix this
+        # sms_status = get_sms_class().send_verification_code(user.phone_number,code)
+        # if not sms_status:
+        #     return Response(
+        #         {"detail":_("sms code didn't send!")},
+        #         status=status.HTTP_400_BAD_REQUEST
+        #     )
+
         national_code = user.national_code
         cache.set(verify_code.format(national_code=national_code), code, timeout=60)
 
@@ -141,12 +151,12 @@ class ResetPasswordView(APIView):
 class UserListCreateView(BaseAPIView):
     permission_classes = (IsSuperUser | IsNotNormalUser & HasBranch,)
     serializer_class = UserCreationSerializer
-    queryset = User.objects.filter(user_type__in=[UserTypeChoices.NORMAL, UserTypeChoices.ADMIN])
+    queryset = User.objects.all()
 
     def post(self, request):
         serializer = UserCreationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        # add a permission which check allow_branches
+        # TODO add a permission which check allow_branches
         branch = serializer.validated_data["active_branch"]
         self.check_object_permissions(request, branch)
 
@@ -158,10 +168,11 @@ class UserListCreateView(BaseAPIView):
         )
 
     def get(self, request):
+
         users = self.queryset.filter(
-            active_branch__isnull=False,
             active_branch__smoothing=request.user.active_branch.smoothing
-        )
+        ).distinct()
+
         serializer = UserDetailSerializer(users, many=True)
 
         return Response(serializer.data)
