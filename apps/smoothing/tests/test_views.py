@@ -24,14 +24,6 @@ class TestSmoothingView(BaseTestView):
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_delete_smoothing_with_user(self, api_client, owner_user):
-        smoothing = self.initial_data.create_object()
-        owner_user.smoothing = smoothing
-        owner_user.save()
-
-        response = api_client.delete(self.detail_update_delete_url(smoothing.pk))
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-
 
 class TestBranchView:
     create_url = BaseTestView.get_urls(Branch)[1]
@@ -137,7 +129,7 @@ class TestBranchView:
 
         assert response.status_code == status.HTTP_200_OK
 
-    def test_retrieve_cross_smoothing_returns_404(self, api_client, owner_user,create_user):
+    def test_retrieve_cross_smoothing_returns_404(self, api_client, owner_user, create_user):
         other_owner = create_user(national_code="1010101010", phone_number="09101010101")
         api_client.force_authenticate(owner_user)
 
@@ -177,7 +169,7 @@ class TestBranchView:
 
     # ---------------- list ----------------
 
-    def test_list_filters_by_smoothing(self, api_client, owner_user,create_user):
+    def test_list_filters_by_smoothing(self, api_client, owner_user, create_user):
         other_owner = create_user(national_code="1010101010", phone_number="09101010101")
         api_client.force_authenticate(owner_user)
 
@@ -188,7 +180,7 @@ class TestBranchView:
         assert owner_user.active_branch.pk in returned_ids
         assert other_owner.active_branch.pk not in returned_ids
 
-    def test_list_superuser_scoped_to_own_smoothing(self, api_client, super_user,create_user):
+    def test_list_superuser_scoped_to_own_smoothing(self, api_client, super_user, create_user):
         other_owner = create_user(national_code="1010101010", phone_number="09101010101")
         api_client.force_authenticate(super_user)
 
@@ -222,7 +214,7 @@ class TestBranchView:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["name"] == "updated name"
 
-    def test_update_smoothing_field_is_ignored(self, api_client, owner_user,create_user):
+    def test_update_smoothing_field_is_ignored(self, api_client, owner_user, create_user):
         other_owner = create_user(national_code="1010101010", phone_number="09101010101")
         api_client.force_authenticate(owner_user)
 

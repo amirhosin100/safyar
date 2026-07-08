@@ -18,7 +18,8 @@ class BaseQuerySet(models.QuerySet):
 
 class BaseManager(models.Manager):
     def get_queryset(self):
-        return BaseQuerySet(self.model, using=self._db)
+        queryset = BaseQuerySet(self.model, using=self._db)
+        return queryset.filter(deleted=False)
 
 
 class BaseModel(models.Model):
@@ -32,6 +33,11 @@ class BaseModel(models.Model):
         verbose_name=_("Updated at"),
         help_text=_("Last time the record was saved."),
     )
+    deleted = models.BooleanField(
+        default=False,
+        verbose_name=_("Deleted"),
+        help_text=_("Whether the record was deleted."),
+    )
     objects = BaseManager()
 
     @staticmethod
@@ -40,3 +46,11 @@ class BaseModel(models.Model):
 
     class Meta:
         abstract = True
+
+    def delete(self, using=None, keep_parents=False):
+        self.deleted = True
+        self.save()
+
+    def restore(self):
+        self.deleted = False
+        self.save()

@@ -1,13 +1,11 @@
 import random
 
-from django.db.models import ProtectedError
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.account.choices import UserTypeChoices
 from apps.account.models import User
 from apps.account.serializers import (
     UserLoginSerializer,
@@ -27,8 +25,6 @@ from django.core.cache import cache
 from django.utils.translation import gettext_lazy as _
 
 from apps.core.utils.prefix import verify_code
-from apps.core.utils.protected_error import show_protected_error
-from apps.core.sms import get_sms_class
 
 
 class UserLoginView(APIView):
@@ -227,11 +223,7 @@ class UserUpdateDeleteView(APIView):
             )
         self.check_object_permissions(request, user)
 
-        try:
-            user.delete()
-        except ProtectedError as e:
-            return show_protected_error(e)
-
+        user.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

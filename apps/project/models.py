@@ -69,7 +69,7 @@ class Project(BaseModel):
         super().save(*args, **kwargs)
 
 
-class ProjectImage(models.Model):
+class ProjectImage(BaseModel):
     project = models.ForeignKey(
         Project,
         on_delete=models.CASCADE,

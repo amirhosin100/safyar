@@ -1,15 +1,11 @@
-from django.db.models import ProtectedError
 from django.utils import translation
-from rest_framework import status
 
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import DjangoModelPermissions, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
-from apps.account.choices import UserTypeChoices
 from apps.core.permissions import HasBranch, IsSuperUser
 from apps.core.utils.filters import (
     CustomFilterSetFilter,
@@ -20,10 +16,6 @@ from apps.core.utils.filters import (
 from apps.core.utils.form_schema import build_form_schema
 from apps.core.utils.pagination import OptionalPageNumberPagination
 from apps.core.utils.i18n_request import negotiate_request_lang
-from django.utils.translation import gettext_lazy as _
-
-from apps.core.utils.protected_error import show_protected_error
-
 
 class BaseAPIView(GenericAPIView):
     serializer_prefix = "Simple"
@@ -74,11 +66,6 @@ class BaseProtectionViewSet(BaseAPIView, ModelViewSet):
             schema = build_form_schema(model, serializer)
         return Response(schema)
 
-    def destroy(self, request, *args, **kwargs):
-        try:
-            return super().destroy(request, *args, **kwargs)
-        except ProtectedError as e:
-            return show_protected_error(e)
 
 
 class FilterByBranchViewSet(BaseProtectionViewSet):

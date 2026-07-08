@@ -2,12 +2,6 @@
 
 from django.db import migrations
 
-from apps.owner.models import SupportInformation
-
-
-def create_support_information(*args):
-    if not SupportInformation.objects.first():
-        SupportInformation.objects.create()
 
 
 class Migration(migrations.Migration):
@@ -16,6 +10,3 @@ class Migration(migrations.Migration):
         ('owner', '0002_alter_supportinformation_phone_number'),
     ]
 
-    operations = [
-        migrations.RunPython(create_support_information)
-    ]

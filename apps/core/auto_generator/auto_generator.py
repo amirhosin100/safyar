@@ -54,7 +54,7 @@ def get_or_create_serializer(
             (),
             {
                 "model": model,
-                "fields": "__all__",
+                "exclude": ("deleted",),
                 "extra_kwargs": {
                     key: {"write_only": True} for key in write_only_fields
                 },

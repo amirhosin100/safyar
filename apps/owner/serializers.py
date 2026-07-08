@@ -8,13 +8,13 @@ from apps.smoothing.serializers import BranchSerializer
 class UsageMethodSerializer(serializers.ModelSerializer):
     class Meta:
         model = UsageMethod
-        fields = "__all__"
+        exclude = ("deleted",)
 
 
 class VersionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Version
-        fields = "__all__"
+        exclude = ("deleted",)
 
 
 class SupportInformationSerializer(serializers.ModelSerializer):

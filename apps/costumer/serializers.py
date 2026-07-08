@@ -6,11 +6,11 @@ from apps.costumer.models import Costumer, Car
 class CostumerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Costumer
-        fields = "__all__"
         read_only_fields = ("branch",)
+        exclude = ("deleted",)
 
 
 class CarSerializer(serializers.ModelSerializer):
     class Meta:
         model = Car
-        fields = "__all__"
+        exclude = ("deleted",)

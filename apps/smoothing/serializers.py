@@ -7,14 +7,14 @@ from apps.smoothing.models import Smoothing, Branch, Colleague
 class SmoothingSerializer(BaseModelSerializer):
     class Meta:
         model = Smoothing
-        fields = "__all__"
+        exclude = ("deleted",)
 
 
 class BranchSerializer(BaseModelSerializer):
     class Meta:
         model = Branch
-        fields = "__all__"
         read_only_fields = ["smoothing"]
+        exclude = ("deleted",)
 
 
 class BranchSimpleSerializer(serializers.ModelSerializer):
@@ -27,4 +27,4 @@ class BranchSimpleSerializer(serializers.ModelSerializer):
 class ColleagueSerializer(BaseModelSerializer):
     class Meta:
         model = Colleague
-        fields = "__all__"
+        exclude = ("deleted",)

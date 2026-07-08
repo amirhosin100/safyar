@@ -5,7 +5,7 @@ from apps.project.models import Project, MainPart, FixArea, ProjectImage, FixIte
 class FixItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = FixItem
-        fields = "__all__"
+        exclude = ("deleted",)
 
 
 class ProjectSerializer(serializers.ModelSerializer):

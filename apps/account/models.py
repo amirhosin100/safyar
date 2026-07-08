@@ -10,7 +10,7 @@ from django.utils.translation import gettext_lazy as _
 from apps.core.validations import phone_number_validator, national_code_validator
 
 
-class UserManager(BaseUserManager, BaseManager):
+class UserManager(BaseManager, BaseUserManager):
     def create_user(self, national_code, phone_number, password=None, **extra_fields):
         """
         Creates and saves a User with the given national_code, date of
@@ -91,6 +91,10 @@ class User(AbstractBaseUser, PermissionsMixin):
         null=True,
         blank=True,
     )
+    deleted = models.BooleanField(
+        default=False,
+        verbose_name=_("Deleted"),
+    )
 
     is_active = models.BooleanField(default=True)
 
@@ -130,6 +134,10 @@ class User(AbstractBaseUser, PermissionsMixin):
         if self.active_branch is None and first_branch is not None:
             self.active_branch = first_branch
             self.save()
+
+    def delete(self, using = None, keep_parents = False):
+        self.deleted = True
+        self.save()
 
 
 class OwnerRequest(BaseModel):
