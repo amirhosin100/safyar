@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from apps.core.base_classes.base_viewset import BaseProtectionViewSet
 from apps.core.permissions import HasBranch, IsSuperUser
 from apps.project.models import Project, MainPart, ProjectImage, FixItem
-from apps.project.serializers import ProjectSerializer, FixItemSerializer, MainPartSerializer
+from apps.project.serializers import ProjectSerializer, FixItemSerializer, MainPartSerializer, ProjectImageSerializer
 from django.utils.translation import gettext_lazy as _
 
 
@@ -17,7 +17,10 @@ class ProjectViewSet(BaseProtectionViewSet):
     permission_classes = (HasBranch,)
 
     def get_queryset(self):
-        return self.queryset.filter(branch__in=self.request.user.allowed_branches.all())
+        return self.queryset.filter(
+            smoothing=self.request.user.active_branch.smoothing,
+            branch__in=self.request.user.allowed_branches.all()
+        )
 
     def perform_create(self, serializer):
         car = serializer.validated_data['car']
@@ -29,19 +32,23 @@ class ProjectViewSet(BaseProtectionViewSet):
 
 class ProjectImageViewSet(BaseProtectionViewSet):
     queryset = ProjectImage.objects.all()
-    serializer_class = ProjectSerializer
-    permission_classes = (IsAuthenticated,)
+    serializer_class = ProjectImageSerializer
+    permission_classes = (HasBranch,)
 
     def get_queryset(self):
-        if self.request.user.is_superuser:
-            return self.queryset
-        return self.queryset.filter(project__branch__in=self.request.user.allowed_branches.all())
+        return self.queryset.filter(
+            project__smoothing=self.request.user.active_branch.smoothing,
+            project__branch__in=self.request.user.allowed_branches.all()
+        )
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         project = serializer.validated_data['project']
-        if project.branch not in request.user.allowed_branches.all():
+        if (
+                project.branch not in request.user.allowed_branches.all()
+                or project.smoothing != request.user.active_branch.smoothing
+        ):
             raise PermissionDenied(_("You don't have permission to create image for this project"))
 
         self.perform_create(serializer)
@@ -52,18 +59,22 @@ class ProjectImageViewSet(BaseProtectionViewSet):
 class FixItemViewSet(BaseProtectionViewSet):
     queryset = FixItem.objects.all()
     serializer_class = FixItemSerializer
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (HasBranch,)
 
     def get_queryset(self):
-        if self.request.user.is_superuser:
-            return self.queryset
-        return self.queryset.filter(project__branch__in=self.request.user.allowed_branches.all())
+        return self.queryset.filter(
+            project__smoothing=self.request.user.active_branch.smoothing,
+            project__branch__in=self.request.user.allowed_branches.all()
+        )
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         project = serializer.validated_data['project']
-        if project.branch not in request.user.allowed_branches.all():
+        if (
+                project.branch not in request.user.allowed_branches.all()
+                or project.smoothing != request.user.active_branch.smoothing
+        ):
             raise PermissionDenied(_("You don't have permission to create FixItem for this Project"))
 
         self.perform_create(serializer)

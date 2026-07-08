@@ -1,6 +1,6 @@
 from django.db import models
 from apps.core.models import BaseModel
-from apps.project.choices import FuelTypeChoices, FixTypeChoices, ProjectStatusChoices
+from apps.project.choices import FuelTypeChoices, FixTypeChoices, ProjectStatusChoices, TemporalChoices
 
 from django.utils.translation import gettext_lazy as _
 
@@ -69,7 +69,6 @@ class Project(BaseModel):
         super().save(*args, **kwargs)
 
 
-
 class ProjectImage(models.Model):
     project = models.ForeignKey(
         Project,
@@ -83,8 +82,12 @@ class ProjectImage(models.Model):
     temporal = models.CharField(
         max_length=20,
         verbose_name=_("Temporal"),
-        choices=FuelTypeChoices.choices,
+        choices=TemporalChoices.choices,
     )
+
+    @property
+    def branch(self):
+        return self.project.branch
 
     @property
     def smoothing(self):
@@ -154,6 +157,10 @@ class FixItem(BaseModel):
     )
     number_of_days = models.PositiveSmallIntegerField(verbose_name=_("Number of Days"))
     amount = models.PositiveIntegerField(verbose_name=_("Amount"))
+
+    @property
+    def branch(self):
+        return self.project.branch
 
     class Meta:
         verbose_name = _("FixItem")
