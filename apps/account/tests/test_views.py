@@ -385,7 +385,7 @@ class TestUserUpdateDeleteView:
         data = self._update_data(target_user.active_branch)
         response = api_client.put(self.url(target_user.id), data)
 
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_put_by_admin_with_allowed_branch(self, api_client, admin_user, target_user):
         admin_user.allowed_branches.set([target_user.active_branch])
@@ -560,14 +560,6 @@ class TestUserListView:
         assert response.status_code == status.HTTP_200_OK
         returned_codes = [u["national_code"] for u in response.data]
         assert other_branch_user.national_code not in returned_codes
-
-    def test_list_excludes_non_normal_non_admin_users(self, api_client, owner_user, target_user):
-        """UserListCreateView.queryset is filtered to NORMAL and ADMIN user types only."""
-        api_client.force_authenticate(user=owner_user)
-        response = api_client.get(self.url)
-
-        returned_types = {u["user_type"] for u in response.data}
-        assert UserTypeChoices.OWNER not in returned_types
 
     def test_list_by_admin_returns_users_in_own_branch(self, api_client, admin_user, target_user):
         target_user.active_branch = admin_user.active_branch

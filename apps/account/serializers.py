@@ -10,6 +10,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 
 from apps.smoothing.models import Branch
+from apps.smoothing.serializers import BranchSerializer, BranchSimpleSerializer
 
 
 class UserLoginSerializer(serializers.Serializer):
@@ -169,6 +170,8 @@ class ResetPasswordSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    allowed_branches = BranchSimpleSerializer(many=True)
+
     class Meta:
         model = User
         exclude = ["password", "groups", "user_permissions"]

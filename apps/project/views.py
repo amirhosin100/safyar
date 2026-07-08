@@ -35,13 +35,13 @@ class ProjectImageViewSet(BaseProtectionViewSet):
     def get_queryset(self):
         if self.request.user.is_superuser:
             return self.queryset
-        return self.queryset.filter(project__smoothing=self.request.user.active_branch.smoothing)
+        return self.queryset.filter(project__branch__in=self.request.user.allowed_branches.all())
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         project = serializer.validated_data['project']
-        if project.smoothing != request.user.branch.smoothing:
+        if project.branch not in request.user.allowed_branches.all():
             raise PermissionDenied(_("You don't have permission to create image for this project"))
 
         self.perform_create(serializer)
@@ -57,13 +57,13 @@ class FixItemViewSet(BaseProtectionViewSet):
     def get_queryset(self):
         if self.request.user.is_superuser:
             return self.queryset
-        return self.queryset.filter(project__smoothing=self.request.user.active_branch.smoothing)
+        return self.queryset.filter(project__branch__in=self.request.user.allowed_branches.all())
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         project = serializer.validated_data['project']
-        if project.smoothing != request.user.active_branch.smoothing:
+        if project.branch not in request.user.allowed_branches.all():
             raise PermissionDenied(_("You don't have permission to create FixItem for this Project"))
 
         self.perform_create(serializer)

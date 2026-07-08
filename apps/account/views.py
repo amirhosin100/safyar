@@ -156,7 +156,6 @@ class UserListCreateView(BaseAPIView):
     def post(self, request):
         serializer = UserCreationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        # TODO add a permission which check allow_branches
         branch = serializer.validated_data["active_branch"]
         self.check_object_permissions(request, branch)
 
@@ -168,7 +167,6 @@ class UserListCreateView(BaseAPIView):
         )
 
     def get(self, request):
-
         users = self.queryset.filter(
             active_branch__smoothing=request.user.active_branch.smoothing
         ).distinct()
@@ -192,7 +190,14 @@ class UserUpdateDeleteView(APIView):
                 },
                 status=status.HTTP_404_NOT_FOUND
             )
-        self.check_object_permissions(request, user)
+        user_allowed_branches = set(self.request.user.allowed_branches.values_list("pk", flat=True))
+        target_allowed_branches = set(user.allowed_branches.values_list("pk", flat=True))
+
+        if not(target_allowed_branches <= user_allowed_branches):
+            return Response(
+                data={"detail": _("you don't have access to this user %s" % user.id)},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         serializer = UserUpdateSerializer(data=request.data, instance=user, partial=partial)
         serializer.is_valid(raise_exception=True)
