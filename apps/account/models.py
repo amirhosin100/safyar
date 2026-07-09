@@ -134,7 +134,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
         first_branch = self.allowed_branches.first()
 
-        if self.active_branch is None:
+        if self.active_branch is None and first_branch is not None:
             self.active_branch = first_branch
             self.save()
 
