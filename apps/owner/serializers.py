@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from apps.account.models import User
-from apps.owner.models import UsageMethod, Version, SupportInformation
+from apps.owner.models import UsageMethod, Version, SupportInformation, SmsLog
 from apps.smoothing.serializers import BranchSerializer
 
 
@@ -14,6 +14,12 @@ class UsageMethodSerializer(serializers.ModelSerializer):
 class VersionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Version
+        exclude = ("deleted",)
+
+
+class SmsLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SmsLog
         exclude = ("deleted",)
 
 

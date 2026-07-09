@@ -37,3 +37,8 @@ class ColleagueSerializer(BaseModelSerializer):
     class Meta:
         model = Colleague
         exclude = ("deleted",)
+
+
+class SmsSerializer(serializers.Serializer):
+    message = serializers.CharField(required=True)
+

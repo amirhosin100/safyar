@@ -1,14 +1,20 @@
+from django.utils.translation import gettext_lazy as _
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.base_classes.base_viewset import BaseProtectionViewSet
-from apps.core.permissions import IsSuperUser, IsNotNormalUser, HasBranch, IsOwner
+from apps.core.permissions import IsSuperUser, IsNotNormalUser, HasBranch, IsOwner, IsOwnerOrSuperUser
+from apps.core.sms import get_sms_class
+from apps.costumer.models import Costumer
+from apps.owner.choices import SmsTypeChoices
+from apps.owner.models import SmsLog
 from apps.smoothing.models import Smoothing, Branch, Colleague
 from apps.smoothing.serializers import (
     SmoothingSerializer,
     BranchSerializer,
     ColleagueSerializer,
-    SmoothingSuperUserSerializer
+    SmoothingSuperUserSerializer, SmsSerializer
 )
 
 
@@ -98,3 +104,67 @@ class BranchAPIView(APIView):
 
     def patch(self, request):
         return self.edit(request, partial=True)
+
+
+# TODO add decrease wallet
+class SendBulkSMSAPIView(APIView):
+    permission_classes = (IsOwnerOrSuperUser,)
+
+    def post(self, request):
+        serializer = SmsSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        message = serializer.validated_data["message"]
+
+        phone_numbers = Costumer.objects.filter(
+            branch__smoothing=request.user.smoothing,
+        ).values_list("phone_number", flat=True)
+
+        result = get_sms_class().send_bulk_sms(phone_numbers, message)
+
+        if not all(result):
+            return Response({
+                "detail": "messages didn't send successfully",
+                "pack": result
+            },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        SmsLog.objects.create_log(user=request.user, message=message, sms_type=SmsTypeChoices.BULK)
+
+        return Response({
+            "detail": "messages sent successfully",
+        })
+
+
+class SendSingleSMSAPIView(APIView):
+    permission_classes = (HasBranch,)
+
+    def post(self, request, costumer_id):
+        serializer = SmsSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        message = serializer.validated_data["message"]
+
+        try:
+            costumer = Costumer.objects.get(pk=costumer_id)
+        except Costumer.DoesNotExist:
+            return Response({
+                "detail": _("costumer does not exist")
+            })
+
+        if costumer.branch not in request.user.allowed_branches:
+            return Response(
+                {"detail": _("you don't have permission to send sms messages for this costumer"), },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        result = get_sms_class().send_single_sms(costumer.phone_number, message)
+
+        if not result:
+            return Response(
+                {"detail": _("messages didn't send")},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        SmsLog.objects.create_log(user=request.user, message=message, sms_type=SmsTypeChoices.SINGLE)
+
+        return Response({
+            "detail": _("messages sent successfully"),
+        })

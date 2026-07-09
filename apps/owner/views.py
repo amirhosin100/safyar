@@ -1,14 +1,13 @@
 from rest_framework import viewsets, views
 from rest_framework.response import Response
 
-from apps.account.choices import UserTypeChoices
 from apps.account.models import User
 from apps.core.permissions import IsSuperUser
 from apps.core.base_classes.base_viewset import BaseProtectionViewSet
 
-from apps.owner.models import UsageMethod, Version, SupportInformation
+from apps.owner.models import UsageMethod, Version, SupportInformation, SmsLog
 from apps.owner.serializers import UsageMethodSerializer, VersionSerializer, SupportInformationSerializer, \
-    UserOwnerSerializer
+    UserOwnerSerializer, SmsLogSerializer
 
 
 class UsageMethodViewSet(viewsets.ModelViewSet):
@@ -20,6 +19,12 @@ class UsageMethodViewSet(viewsets.ModelViewSet):
 class VersionViewSet(viewsets.ModelViewSet):
     queryset = Version.objects.all()
     serializer_class = VersionSerializer
+    permission_classes = (IsSuperUser,)
+
+
+class SmsLogViewSet(viewsets.ModelViewSet):
+    queryset = SmsLog.objects.all()
+    serializer_class = SmsLogSerializer
     permission_classes = (IsSuperUser,)
 
 

@@ -42,15 +42,22 @@ class SMSIR(AbstractSMS):
 
     def send_bulk_sms(
             self, phone_numbers: list | tuple, message: str, time=None
-    ) -> bool:
+    ) -> list[bool]:
+        statuses = []
         url = "https://api.sms.ir/v1/send/bulk"
         data = {
             "lineNumber": self.line_number,
             "messageText": message,
-            "mobiles": phone_numbers,
             "sendDateTime": time,
         }
-        return self._send_request("POST", url, data)
+
+        while phone_numbers:
+            slice_numbers = phone_numbers[0:100]
+            phone_numbers = phone_numbers[100:]
+            data["mobiles"] = slice_numbers
+            statuses.append(self._send_request("POST", url, data))
+
+        return statuses
 
     def cancel_bulk_sms(self, identifier: str) -> bool:
         url = f"https://api.sms.ir/v1/send/scheduled/{identifier}"
