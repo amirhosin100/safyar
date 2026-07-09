@@ -24,6 +24,17 @@ class TestSmoothingView(BaseTestView):
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
+    def test_create(self, api_client):
+        count = self.model.objects.count()
+        self.create_data.set_up()
+        response = api_client.post(
+            self.list_create_url, data=self.create_data.request_data
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert self.model.objects.count() == count + 1
+        self.create_data.check_response(response.data)
+
 
 class TestBranchView:
     create_url = BaseTestView.get_urls(Branch)[1]

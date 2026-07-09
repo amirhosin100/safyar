@@ -57,6 +57,10 @@ class Smoothing(BaseModel):
         verbose_name=_("Wallet Stock"),
         default=0
     )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_("Is Active"),
+    )
 
     def save(self, *args, **kwargs):
         if self.wallet_stock == 0:
@@ -65,6 +69,7 @@ class Smoothing(BaseModel):
             self.status = SmoothingStatusChoices.ACTIVATED
 
         super().save(*args, **kwargs)
+        self._pre_is_active = self.is_active
 
         if self.branches.count() == 0:
             Branch.objects.create(
@@ -72,6 +77,12 @@ class Smoothing(BaseModel):
                 smoothing=self,
                 order=1,
             )
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        instance = super().from_db(db, field_names, values)
+        instance._pre_is_active = instance.is_active
+        return instance
 
 
 class Branch(BaseModel):

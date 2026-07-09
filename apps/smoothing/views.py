@@ -1,18 +1,23 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.account.choices import UserTypeChoices
-from apps.core.base_classes.base_viewset import BaseProtectionViewSet, FilterByBranchViewSet
-from apps.core.permissions import IsSuperUser, IsNotNormalUser, HasBranch, IsOwner, IsOwnerOrSuperUser
+from apps.core.base_classes.base_viewset import BaseProtectionViewSet
+from apps.core.permissions import IsSuperUser, IsNotNormalUser, HasBranch, IsOwner
 from apps.smoothing.models import Smoothing, Branch, Colleague
-from apps.smoothing.serializers import SmoothingSerializer, BranchSerializer, ColleagueSerializer
+from apps.smoothing.serializers import (
+    SmoothingSerializer,
+    BranchSerializer,
+    ColleagueSerializer,
+    SmoothingSuperUserSerializer
+)
 
 
-# TODO write tests for these
 class SmoothingViewSet(BaseProtectionViewSet):
-    serializer_class = SmoothingSerializer
     queryset = Smoothing.objects.all()
     permission_classes = (IsSuperUser,)
+
+    def get_serializer_class(self):
+        return SmoothingSuperUserSerializer
 
 
 class BranchViewSet(BaseProtectionViewSet):

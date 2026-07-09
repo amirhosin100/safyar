@@ -1,4 +1,3 @@
-from apps.account.tests.fixtures.data import user_initial_data
 from apps.core.tests.image import create_image
 from apps.core.tests.base_test import APIRequestData, InitialData
 from apps.smoothing.choices import SmoothingStatusChoices
@@ -15,7 +14,7 @@ smoothing_initial_data = InitialData(
         "city": "yazd",
         "address": "yazd",
         "status": SmoothingStatusChoices.ACTIVATED,
-        "wallet_stock": 2000,
+        "wallet_stock": 0,
     },
     {
         "name": "test",
@@ -24,8 +23,10 @@ smoothing_initial_data = InitialData(
         "phone_number": "09123456789",
         "city": "yazd",
         "address": "yazd",
-        "status": SmoothingStatusChoices.ACTIVATED,
-        "wallet_stock": 2000,
+        "status": SmoothingStatusChoices.DEACTIVATED,
+        "wallet_stock": 0,
+        "deleted": False,
+        "is_active": True,
     },
     extra_fields=["created_at", "updated_at", "id", "logo"]
 )
@@ -52,6 +53,8 @@ smoothing_create_data = APIRequestData(
         "address": "yazd",
         "status": 0,
         "wallet_stock": 0,
+        "deleted": False,
+        "is_active": True,
     },
     extra_fields=["created_at", "updated_at", "id", "logo"]
 )
@@ -96,8 +99,10 @@ smoothing_update_data = APIRequestData(
         "phone_number": "09193456789",
         "city": "yazd",
         "address": "yazd",
-        "status": 1,
-        "wallet_stock": 2000,
+        "status": 0,
+        "wallet_stock": 0,
+        "deleted": False,
+        "is_active": True,
     },
     extra_fields=["created_at", "updated_at", "id", "logo"]
 )

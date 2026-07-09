@@ -97,6 +97,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
 
     is_active = models.BooleanField(default=True)
+    is_active_smoothing = models.BooleanField(default=True)
 
     objects = UserManager()
 
@@ -130,12 +131,14 @@ class User(AbstractBaseUser, PermissionsMixin):
         if self.smoothing:
             self.allowed_branches.set(self.smoothing.branches.all())
 
+        # TODO write a validation for check allowed_branches
+
         first_branch = self.allowed_branches.first()
         if self.active_branch is None and first_branch is not None:
             self.active_branch = first_branch
             self.save()
 
-    def delete(self, using = None, keep_parents = False):
+    def delete(self, using=None, keep_parents=False):
         self.deleted = True
         self.save()
 

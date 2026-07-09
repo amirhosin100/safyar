@@ -8,6 +8,15 @@ class SmoothingSerializer(BaseModelSerializer):
     class Meta:
         model = Smoothing
         exclude = ("deleted",)
+        read_only_fields = ("is_active",)
+
+
+class SmoothingSuperUserSerializer(serializers.ModelSerializer):
+    is_active = serializers.BooleanField(default=True)
+
+    class Meta:
+        model = Smoothing
+        fields = "__all__"
 
 
 class BranchSerializer(BaseModelSerializer):

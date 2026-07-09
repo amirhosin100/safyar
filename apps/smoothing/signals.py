@@ -1,6 +1,7 @@
 from django.dispatch import receiver
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 
+from apps.account.models import User
 from apps.smoothing.models import Smoothing, Branch
 from apps.wallet.models import Wallet
 
@@ -22,3 +23,11 @@ def update_allowed_branches_of_user(sender, instance, created, **kwargs):
     if hasattr(instance.smoothing, "owner_user"):
         owner_user = instance.smoothing.owner_user
         owner_user.allowed_branches.add(instance)
+
+
+@receiver(pre_save, sender=Smoothing)
+def update_user_is_smoothing_active(sender, instance, **kwargs):
+    if instance.pk and hasattr(instance, "_pre_is_active"):
+        if instance.is_active != instance._pre_is_active:
+            users = User.objects.filter(active_branch__smoothing=instance)
+            users.update(is_active_smoothing=instance.is_active)
