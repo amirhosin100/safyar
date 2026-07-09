@@ -89,7 +89,6 @@ class User(AbstractBaseUser, PermissionsMixin):
         on_delete=models.PROTECT,
         verbose_name=_("Active branch"),
         null=True,
-        blank=True,
     )
     deleted = models.BooleanField(
         default=False,
@@ -134,7 +133,8 @@ class User(AbstractBaseUser, PermissionsMixin):
         # TODO write a validation for check allowed_branches
 
         first_branch = self.allowed_branches.first()
-        if self.active_branch is None and first_branch is not None:
+
+        if self.active_branch is None:
             self.active_branch = first_branch
             self.save()
 
@@ -180,3 +180,9 @@ class OwnerRequest(BaseModel):
 
         self.user.save()
         super().save(*args, **kwargs)
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        instance = super().from_db(db, field_names, values)
+        instance._pre_status = instance.status
+        return instance
