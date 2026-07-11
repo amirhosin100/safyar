@@ -1,5 +1,7 @@
-from .helper import get_sms_class
+from .helper import sms_class
+from .center import sms_center
 
 __all__ = [
-    get_sms_class
+    sms_class,
+    sms_center,
 ]

@@ -5,15 +5,23 @@ from rest_framework.exceptions import ValidationError
 
 from apps.account.choices import OwnerRequestChoices
 from apps.account.models import OwnerRequest
+from apps.core.sms import sms_center
 
 
 @receiver(pre_save, sender=OwnerRequest)
 def invalid_change_status_from_accepted_to_rejected(sender, instance, **kwargs):
-    if instance.pk and hasattr(instance, "_pre_status"):
-        if instance.status != instance._pre_status:
-            if (
-                    instance.status == OwnerRequestChoices.REJECTED and
-                    instance._pre_status == OwnerRequestChoices.ACCEPTED
-            ):
-                raise ValidationError(_("You cannot reject an accepted smoothing"))
+    if not instance.pk and hasattr(instance, "_pre_status"):
+        return
+
+    if instance.status != instance._pre_status:
+        if (
+                instance.status in [OwnerRequestChoices.REJECTED,OwnerRequestChoices.PENDING] and
+                instance._pre_status == OwnerRequestChoices.ACCEPTED
+        ):
+            raise ValidationError(_("You cannot reject or pending an accepted smoothing"))
+
+        if instance.status == OwnerRequestChoices.REJECTED:
+            sms_center.send_rejected_smoothing_sms(instance.user)
+        elif instance.status == OwnerRequestChoices.ACCEPTED:
+            sms_center.send_accepted_smoothing_sms(instance.user)
 

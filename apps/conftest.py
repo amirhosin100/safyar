@@ -2,6 +2,7 @@ import os
 import shutil
 
 import pytest
+from apps.core.sms import sms_class
 
 from apps.account.choices import UserTypeChoices
 from apps.account.models import User
@@ -20,9 +21,10 @@ def create_branch_for_user():
 
     return wrapper
 
+
 @pytest.fixture
 def create_user(create_branch_for_user):
-    def wrapper(create_branch=True,**kwargs):
+    def wrapper(create_branch=True, **kwargs):
         branch = None
         if create_branch:
             branch = create_branch_for_user()
@@ -36,8 +38,8 @@ def create_user(create_branch_for_user):
             branch.save()
 
         return user
-    return wrapper
 
+    return wrapper
 
 
 @pytest.fixture
@@ -98,9 +100,9 @@ def api_client(client, super_user):
 
 @pytest.fixture(autouse=True, scope="session")
 def override_media_root():
-    with override_settings(
-            MEDIA_ROOT=settings.TEST_MEDIA_ROOT,
-    ):
+    # WARNING: DO NOT REMOVE THIS
+    sms_class.real_sending = False
+    with override_settings(MEDIA_ROOT=settings.TEST_MEDIA_ROOT):
         yield
     if os.path.exists(settings.TEST_MEDIA_ROOT):
         shutil.rmtree(settings.TEST_MEDIA_ROOT)

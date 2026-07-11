@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.core.base_classes.base_viewset import BaseProtectionViewSet
-from apps.core.permissions import HasBranch, IsSuperUser
+from apps.core.permissions import HasBranch
 from apps.project.models import Project, MainPart, ProjectImage, FixItem
 from apps.project.serializers import ProjectSerializer, FixItemSerializer, MainPartSerializer, ProjectImageSerializer
 from django.utils.translation import gettext_lazy as _

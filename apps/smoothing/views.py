@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 
 from apps.core.base_classes.base_viewset import BaseProtectionViewSet
 from apps.core.permissions import IsSuperUser, IsNotNormalUser, HasBranch, IsOwner, IsOwnerOrSuperUser
-from apps.core.sms import get_sms_class
+from apps.core.sms import sms_class
 from apps.costumer.models import Costumer
 from apps.owner.choices import SmsTypeChoices
 from apps.owner.models import SmsLog
@@ -119,7 +119,7 @@ class SendBulkSMSAPIView(APIView):
             branch__smoothing=request.user.smoothing,
         ).values_list("phone_number", flat=True)
 
-        result = get_sms_class().send_bulk_sms(phone_numbers, message)
+        result = sms_class.send_bulk_sms(phone_numbers, message)
 
         if not all(result):
             return Response({
@@ -156,7 +156,7 @@ class SendSingleSMSAPIView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        result = get_sms_class().send_single_sms(costumer.phone_number, message)
+        result = sms_class.send_single_sms(costumer.phone_number, message)
 
         if not result:
             return Response(

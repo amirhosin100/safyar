@@ -19,6 +19,7 @@ from apps.account.serializers import (
 )
 from apps.core.base_classes.base_viewset import BaseAPIView
 from apps.core.permissions import IsNotNormalUser, HasBranch, IsSuperUser
+from apps.core.sms import sms_center
 from apps.core.utils.jwt import get_tokens_for_user
 from django.db import IntegrityError
 from django.core.cache import cache
@@ -71,7 +72,7 @@ class UserRegisterView(APIView):
         serializer.is_valid(raise_exception=True)
 
         try:
-            serializer.create(serializer.validated_data)
+            user = serializer.create(serializer.validated_data)
         except IntegrityError:
             return Response(
                 data={
@@ -79,6 +80,10 @@ class UserRegisterView(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
+        super_user = User.objects.filter(is_superuser=True).first()
+        sms_center.send_register_sms(user)
+        if super_user:
+            sms_center.send_register_smoothing_for_super_user(user,super_user)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -189,7 +194,7 @@ class UserUpdateDeleteView(APIView):
         user_allowed_branches = set(self.request.user.allowed_branches.values_list("pk", flat=True))
         target_allowed_branches = set(user.allowed_branches.values_list("pk", flat=True))
 
-        if not(target_allowed_branches <= user_allowed_branches):
+        if not (target_allowed_branches <= user_allowed_branches):
             return Response(
                 data={"detail": _("you don't have access to this user %s" % user.id)},
                 status=status.HTTP_403_FORBIDDEN

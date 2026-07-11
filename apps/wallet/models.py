@@ -14,6 +14,16 @@ class Wallet(BaseModel):
     stock = models.PositiveBigIntegerField(
         verbose_name=_("Stock"),
     )
+    is_sent_warning_sms = models.BooleanField(
+        default=False,
+        verbose_name=_("Is Sent Warning"),
+    )
+    is_sent_empty_sms = models.BooleanField(
+        default=False,
+        verbose_name=_("Is Sent Empty Sms"),
+        help_text=_("If this be False and the stock value is empty, project"
+                    " will send sms to the wallet's owner")
+    )
 
     class Meta:
         verbose_name = _("Wallet")

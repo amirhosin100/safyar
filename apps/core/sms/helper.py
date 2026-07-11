@@ -9,3 +9,5 @@ def get_sms_class():
 
     sms_class = SMSIR(api_key, line_number, verify_template_id)
     return sms_class
+
+sms_class = get_sms_class()

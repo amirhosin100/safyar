@@ -30,6 +30,7 @@ class SMSIR(AbstractSMS):
             "X-Api-Key": api_key,
             "Accept": "application/json",
         }
+        self.real_sending = True
 
     def send_single_sms(self, phone_number: str, message: str) -> bool:
         url = "https://api.sms.ir/v1/send/bulk"
@@ -73,12 +74,14 @@ class SMSIR(AbstractSMS):
         return self._send_request("POST", url, data)
 
     def _send_request(self, method, url, data=None) -> bool:
-        response = requests.request(method, url, headers=self.headers, json=data)
-        return self._check_response(response)
+        if self.real_sending:
+            response = requests.request(method, url, headers=self.headers, json=data)
+            return self._check_response(response)
+        return True
 
     @staticmethod
     def _check_response(response: requests.Response) -> bool:
         status = response.json()["status"] == 1
         if not status:
-            logger.error("sms status : %s", response.json().get("status", ""))
+            logger.critical("sms detail : %s", response.json())
         return status

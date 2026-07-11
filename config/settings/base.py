@@ -147,6 +147,9 @@ TEST_MEDIA_ROOT = BASE_DIR / "test_media/"
 
 AUTH_USER_MODEL = "account.User"
 
+WALLET_WARNING_STOCK = 100000
+WALLET_EMPTY_STOCK = 1000
+
 EXCLUDE_MODELS = {
     "LogEntity",
     "Session",
