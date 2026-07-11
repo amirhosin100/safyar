@@ -15,11 +15,8 @@ class RequestLoggingMiddleware:
         if request.body:
             try:
                 body = request.body.decode("utf-8")
-                print(body)
-
-                # اگر JSON بود
                 try:
-                    print(json.loads(body))
+                    print("request:\n",json.loads(body))
                 except json.JSONDecodeError:
                     pass
 
@@ -27,5 +24,5 @@ class RequestLoggingMiddleware:
                 print("<Binary Data>")
 
         response = self.get_response(request)
-        print(response.content)
+        print("response:\n",response.content)
         return response

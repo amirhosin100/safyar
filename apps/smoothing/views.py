@@ -5,9 +5,9 @@ from rest_framework.views import APIView
 
 from apps.core.base_classes.base_viewset import BaseProtectionViewSet
 from apps.core.permissions import IsSuperUser, IsNotNormalUser, HasBranch, IsOwner, IsOwnerOrSuperUser
-from apps.core.sms import sms_class
+from apps.core.sms import sms_class, schedule_bulk_sms
 from apps.costumer.models import Costumer
-from apps.owner.choices import SmsTypeChoices
+from apps.owner.choices import SmsTypeChoices, SmsLogStatusChoices
 from apps.owner.models import SmsLog
 from apps.smoothing.models import Smoothing, Branch, Colleague
 from apps.smoothing.serializers import (
@@ -119,9 +119,15 @@ class SendBulkSMSAPIView(APIView):
             branch__smoothing=request.user.smoothing,
         ).values_list("phone_number", flat=True)
 
-        result = sms_class.send_bulk_sms(phone_numbers, message)
+        result = schedule_bulk_sms(phone_numbers, message)
 
         if not all(result):
+            SmsLog.objects.create_log(
+                user=request.user,
+                message=message,
+                sms_type=SmsTypeChoices.BULK,
+                status=SmsLogStatusChoices.FAILED
+            )
             return Response({
                 "detail": "messages didn't send successfully",
                 "pack": result
@@ -136,7 +142,7 @@ class SendBulkSMSAPIView(APIView):
 
 
 class SendSingleSMSAPIView(APIView):
-    permission_classes = (HasBranch,)
+    permission_classes = (HasBranch, IsNotNormalUser)
 
     def post(self, request, costumer_id):
         serializer = SmsSerializer(data=request.data)

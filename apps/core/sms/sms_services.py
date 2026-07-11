@@ -43,22 +43,16 @@ class SMSIR(AbstractSMS):
 
     def send_bulk_sms(
             self, phone_numbers: list | tuple, message: str, time=None
-    ) -> list[bool]:
-        statuses = []
+    ) -> bool:
         url = "https://api.sms.ir/v1/send/bulk"
         data = {
             "lineNumber": self.line_number,
             "messageText": message,
             "sendDateTime": time,
+            "mobiles": phone_numbers,
         }
 
-        while phone_numbers:
-            slice_numbers = phone_numbers[0:100]
-            phone_numbers = phone_numbers[100:]
-            data["mobiles"] = slice_numbers
-            statuses.append(self._send_request("POST", url, data))
-
-        return statuses
+        return self._send_request("POST", url, data)
 
     def cancel_bulk_sms(self, identifier: str) -> bool:
         url = f"https://api.sms.ir/v1/send/scheduled/{identifier}"
@@ -81,7 +75,13 @@ class SMSIR(AbstractSMS):
 
     @staticmethod
     def _check_response(response: requests.Response) -> bool:
-        status = response.json()["status"] == 1
+        code = response.json()["status"]
+        status = code == 1
         if not status:
-            logger.critical("sms detail : %s", response.json())
+            match code:
+                case 101:
+                    logger.error("sms detail : %s",response.json())
+                case _:
+                    logger.critical("sms detail : %s", response.json())
+
         return status

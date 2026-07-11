@@ -7,6 +7,6 @@ class SmsTypeChoices(models.TextChoices):
     SINGLE = "SI", _("Single")
 
 
-class SmsSenderChoices(models.TextChoices):
-    SYSTEM = "SY", _("System")
-    SMOOTHING = "SM", _("Smoothing")
+class SmsLogStatusChoices(models.TextChoices):
+    SUCCESS = "SU", _("Success")
+    FAILED = "FA", _("Failed")

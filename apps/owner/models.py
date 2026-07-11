@@ -6,17 +6,18 @@ from apps.core.models import BaseModel, BaseManager
 from django.db import models
 
 from apps.core.validations import phone_number_validator
-from apps.owner.choices import SmsTypeChoices
+from apps.owner.choices import SmsTypeChoices, SmsLogStatusChoices
 from django.utils.translation import gettext_lazy as _
 
 
 class SmsManager(BaseManager):
-    def create_log(self, user, message, sms_type):
+    def create_log(self, user, message, sms_type, status=SmsLogStatusChoices.SUCCESS):
         sms = self.get_queryset().create(
             send_by=user,
             branch=user.active_branch,
             message=message,
             sms_type=sms_type,
+            status=status
         )
         return sms
 
@@ -75,6 +76,12 @@ class SmsLog(BaseModel):
         on_delete=models.PROTECT,
         verbose_name=_("Send By User"),
     )
+    status = models.CharField(
+        max_length=2,
+        choices=SmsLogStatusChoices.choices,
+        default=SmsLogStatusChoices.SUCCESS,
+    )
+
     objects = SmsManager()
 
     class Meta:

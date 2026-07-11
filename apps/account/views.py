@@ -55,8 +55,11 @@ class UserLoginView(APIView):
         except User.DoesNotExist:
             return self.user_not_found()
 
-        if not user.check_password(serializer.validated_data["password"]) or not user.is_active:
+        if not user.check_password(serializer.validated_data["password"]):
             return self.user_not_found()
+
+        if not user.is_active():
+            return Response({"detail": _("user is inactive")}, status=status.HTTP_403_FORBIDDEN)
 
         tokens = get_tokens_for_user(user)
         res_serializer = UserLoginResponseSerializer(data=tokens)
@@ -83,7 +86,7 @@ class UserRegisterView(APIView):
         super_user = User.objects.filter(is_superuser=True).first()
         sms_center.send_register_sms(user)
         if super_user:
-            sms_center.send_register_smoothing_for_super_user(user,super_user)
+            sms_center.send_register_smoothing_for_super_user(user, super_user)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -121,6 +124,7 @@ class SendCodeResetPasswordView(APIView):
 
 class VerifyCodeView(APIView):
     permission_classes = (AllowAny,)
+    serializer_class = VerifyCodeSerializer
 
     def post(self, request):
         serializer = VerifyCodeSerializer(data=request.data)
@@ -173,7 +177,6 @@ class UserListCreateView(BaseAPIView):
         ).distinct()
 
         serializer = UserDetailSerializer(users, many=True)
-
         return Response(serializer.data)
 
 

@@ -26,7 +26,7 @@ class BranchSerializer(BaseModelSerializer):
         exclude = ("deleted",)
 
 
-class BranchSimpleSerializer(serializers.ModelSerializer):
+class BranchUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = Branch
         fields = ["id", "name"]
