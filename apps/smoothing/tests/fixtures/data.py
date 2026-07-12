@@ -63,6 +63,8 @@ branch_initial_data = InitialData(
     {
         "name": "test",
         "order": 1,
+        "open_time": "10:20:00",
+        "closed_time": "20:00:00"
     },
     relation_fields={
         "smoothing": smoothing_initial_data
@@ -73,6 +75,8 @@ branch_create_data = APIRequestData(
     {
         "name": "test 2",
         "order": 2,
+        "open_time": "10:20:00",
+        "closed_time": "20:00:00"
     },
     relation_fields={
         "smoothing": smoothing_create_data

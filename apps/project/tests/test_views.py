@@ -1,4 +1,5 @@
 import pytest
+from django.utils import timezone
 from rest_framework import status
 
 from apps.core.tests.base_test import BaseTestModel
@@ -7,6 +8,7 @@ from apps.costumer.tests.fixtures.data import car_initial_data
 from apps.project.choices import FuelTypeChoices, FixTypeChoices, TemporalChoices
 from apps.project.models import Project, ProjectImage, FixItem, MainPart, FixArea
 from apps.project.tests.fixtures.data import project_initial_data
+from apps.smoothing.tests.fixtures.data import branch_initial_data
 
 pytestmark = pytest.mark.django_db
 
@@ -26,8 +28,10 @@ class TestProjectView(BaseTestModel):
 
             self.create_data.request_data["car"] = car.id
             self.create_data.request_data["branch"] = car.branch.id
+
             response = api_client.post(self.list_create_url, data=self.create_data.request_data)
             assert response.status_code == status.HTTP_201_CREATED
+            Project.objects.filter(pk=response.data["id"]).delete()
 
     def test_with_other_users(self, api_client, owner_user, normal_user, super_user):
         car = car_initial_data.create_object()
@@ -78,6 +82,9 @@ class TestProjectViewPermissions:
     def _create_project_for_branch(branch):
         project = project_initial_data.create_object()
         project.branch = branch
+        project.branch.open_time = branch_initial_data.request_data["open_time"]
+        project.branch.closed_time = branch_initial_data.request_data["closed_time"]
+        project.branch.save()
         project.save()  # Project.save() derives smoothing from branch automatically
         return project
 
@@ -431,6 +438,9 @@ class TestProjectImageViewSet:
     def _create_project_for_branch(branch):
         project = project_initial_data.create_object()
         project.branch = branch
+        project.branch.open_time = branch_initial_data.request_data["open_time"]
+        project.branch.closed_time = branch_initial_data.request_data["closed_time"]
+        project.branch.save()
         project.save()
         return project
 
@@ -673,6 +683,9 @@ class TestFixItemViewSet:
     def _create_project_for_branch(branch):
         project = project_initial_data.create_object()
         project.branch = branch
+        project.branch.open_time = branch_initial_data.request_data["open_time"]
+        project.branch.closed_time = branch_initial_data.request_data["closed_time"]
+        project.branch.save()
         project.save()
         return project
 

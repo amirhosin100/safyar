@@ -21,6 +21,7 @@ class TestScheduleView:
         branch.open_time = time(minute=30, hour=7)
         branch.closed_time = time(minute=0, hour=18)
         branch.closed_days = ClosedDayChoices.FRIDAY
+        branch.smoothing = super_user.smoothing
         branch.save()
 
         project = project_initial_data.create_object()
@@ -29,6 +30,6 @@ class TestScheduleView:
         project.turn_time = timezone.make_aware(project.turn_time)
         project.save()
 
-        response = api_client.post(self.url, {"month": "4", "year": "2026", "branch_id": branch.id})
+        response = api_client.get(self.url +f"?month=4&year=2026&branch_id={branch.id}")
         assert response.status_code == status.HTTP_200_OK
         assert "7:30" not in response.data["2026-04-11"]

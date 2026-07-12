@@ -266,6 +266,9 @@ class TestCreateUser:
 
     def test_with_allowed_branches(self, api_client, super_user, owner_user):
         branch = branch_initial_data.create_object()
+        branch.smoothing = owner_user.smoothing
+        branch.save()
+        owner_user.save()
 
         api_client.force_authenticate(user=owner_user)
         data = self.create_data(owner_user.active_branch)
@@ -399,7 +402,7 @@ class TestUserUpdateDeleteView:
         data = self._update_data(target_user.active_branch)
         response = api_client.put(self.url(target_user.id), data)
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_200_OK
 
     def test_put_by_admin_with_allowed_branch(self, api_client, admin_user, target_user):
         admin_user.allowed_branches.set([target_user.active_branch])

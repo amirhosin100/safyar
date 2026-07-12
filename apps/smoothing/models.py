@@ -1,8 +1,10 @@
+import datetime
+
 from apps.core.models import BaseModel
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from apps.core.validations import phone_number_validator
+from apps.core.validations import phone_number_validator, validate_image_size_2m, image_format_validator
 from apps.smoothing.choices import ClosedDayChoices, OrderChoices, JobTypeChoices, SmoothingStatusChoices
 
 
@@ -11,6 +13,10 @@ class Smoothing(BaseModel):
         verbose_name=_("Logo"),
         null=True,
         blank=True,
+        validators=[
+            validate_image_size_2m,
+            image_format_validator
+        ]
     )
     name = models.CharField(
         max_length=255,
@@ -103,13 +109,11 @@ class Branch(BaseModel):
     )
     open_time = models.TimeField(
         verbose_name=_("Open time"),
-        null=True,
-        blank=True
+        default=datetime.time(hour=8, minute=30),
     )
     closed_time = models.TimeField(
         verbose_name=_("Closed time"),
-        null=True,
-        blank=True
+        default=datetime.time(hour=20, minute=0),
     )
     order = models.PositiveSmallIntegerField(
         verbose_name=_("Order"),

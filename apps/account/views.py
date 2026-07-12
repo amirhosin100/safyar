@@ -5,6 +5,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.exceptions import PermissionDenied
 
 from apps.account.models import User
 from apps.account.serializers import (
@@ -26,6 +27,13 @@ from django.core.cache import cache
 from django.utils.translation import gettext_lazy as _
 
 from apps.core.utils.prefix import verify_code
+
+
+def check_access_user(request, target_allowed_branches: set, target_full_name: str):
+    user_allowed_branches = set(request.user.allowed_branches.values_list("pk", flat=True))
+
+    if not (target_allowed_branches <= user_allowed_branches):
+        raise PermissionDenied(_("you don't have access to this user %s" % target_full_name))
 
 
 class UserLoginView(APIView):
@@ -162,6 +170,12 @@ class UserListCreateView(BaseAPIView):
         serializer = UserCreationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        allowed_branches = serializer.validated_data["allowed_branches"]
+        full_name = serializer.validated_data["full_name"]
+
+        target_branches = {branch.pk for branch in allowed_branches}
+        check_access_user(request, target_branches, full_name)
+
         user = serializer.create(serializer.validated_data)
         serializer.instance = user
 
@@ -188,19 +202,13 @@ class UserUpdateDeleteView(APIView):
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
             return Response(
-                data={
-                    "detail": _("user not found")
-                },
+                data={"detail": _("user not found")},
                 status=status.HTTP_404_NOT_FOUND
             )
-        user_allowed_branches = set(self.request.user.allowed_branches.values_list("pk", flat=True))
-        target_allowed_branches = set(user.allowed_branches.values_list("pk", flat=True))
 
-        if not (target_allowed_branches <= user_allowed_branches):
-            return Response(
-                data={"detail": _("you don't have access to this user %s" % user.id)},
-                status=status.HTTP_403_FORBIDDEN
-            )
+        if not request.user.is_superuser:
+            target_branches = set(user.allowed_branches.values_list("pk", flat=True))
+            check_access_user(request, target_branches, user.full_name)
 
         serializer = UserUpdateSerializer(data=request.data, instance=user, partial=partial)
         serializer.is_valid(raise_exception=True)
@@ -223,12 +231,13 @@ class UserUpdateDeleteView(APIView):
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
             return Response(
-                data={
-                    "detail": _("user not found")
-                },
+                data={"detail": _("user not found")},
                 status=status.HTTP_404_NOT_FOUND
             )
-        self.check_object_permissions(request, user)
+
+        if not request.user.is_superuser:
+            target_branches = set(user.allowed_branches.values_list("pk", flat=True))
+            check_access_user(request, target_branches, user.full_name)
 
         user.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

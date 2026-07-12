@@ -9,14 +9,14 @@ project_initial_data = InitialData(
     {
         "kilometer_of_car": 200,
         "fuel_value": FuelTypeChoices.FULL,
-        "turn_time": "2001-10-20",
+        "turn_time": "2001-10-20T14:00:00+03:30",
         "status": ProjectStatusChoices.TURNED,
         "fee": 100,
     },
     {
         "kilometer_of_car": 200,
         "fuel_value": FuelTypeChoices.FULL.value,
-        "turn_time": "2001-10-20T00:00:00+03:30",
+        "turn_time": "2001-10-20T14:00:00+03:30",
         "status": ProjectStatusChoices.TURNED.value,
         "fee": 100,
     },
@@ -32,13 +32,13 @@ project_create_data = APIRequestData(
     {
         "kilometer_of_car": 300,
         "fuel_value": FuelTypeChoices.FULL,
-        "turn_time": "2001-10-30",
+        "turn_time": "2001-10-20T14:00:00+03:30",
         "status": ProjectStatusChoices.TURNED,
     },
     {
         "kilometer_of_car": 300,
         "fuel_value": FuelTypeChoices.FULL.value,
-        "turn_time": "2001-10-30T00:00:00+03:30",
+        "turn_time": "2001-10-20T14:00:00+03:30",
         "status": ProjectStatusChoices.TURNED.value,
     },
     relation_fields={

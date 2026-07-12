@@ -1,7 +1,11 @@
+import datetime
+
+from django.utils.dateparse import parse_datetime
 from django.db import models
 from rest_framework.exceptions import ValidationError
 
 from apps.core.models import BaseModel
+from apps.core.validations import validate_image_size_10m, image_format_validator
 from apps.project.choices import FuelTypeChoices, FixTypeChoices, ProjectStatusChoices, TemporalChoices
 
 from django.utils.translation import gettext_lazy as _
@@ -66,6 +70,7 @@ class Project(BaseModel):
             models.Index(fields=["status"]),
             models.Index(fields=["created_at"]),
         ]
+        unique_together = ("branch", "turn_time")
 
     def __str__(self):
         return f"{self.car} | {self.created_at}"
@@ -76,6 +81,21 @@ class Project(BaseModel):
 
         if self.status != ProjectStatusChoices.CANCELED and self.reason_of_cancelled:
             raise ValidationError(_("You just can write reason when status is CANCELED"))
+
+        if self.turn_time is not None:
+            self.turn_time = parse_datetime(str(self.turn_time))
+            self.turn_time = self.turn_time.replace(microsecond=0,second=0)
+
+        closed_time = branch.closed_time
+        open_time = branch.open_time
+
+        if closed_time is None or open_time is None:
+            raise ValidationError(_("You must declare closed_time and open_time for branch and save projetc"))
+
+        time = datetime.time(hour=self.turn_time.hour, minute=self.turn_time.minute)
+
+        if not (closed_time >= time >= open_time):
+            raise ValidationError(_("turn_time must between %s and %s") % (str(open_time), str(closed_time)))
 
         super().save(*args, **kwargs)
 
@@ -89,6 +109,10 @@ class ProjectImage(BaseModel):
     )
     image = models.ImageField(
         upload_to='images/project',
+        validators=[
+            validate_image_size_10m,
+            image_format_validator
+        ]
     )
     temporal = models.CharField(
         max_length=20,

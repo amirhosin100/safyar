@@ -161,6 +161,8 @@ EXCLUDE_MODELS = {
     "WalletTransaction",
     "Wallet",
     "SmsLog",
+    "FixArea",
+    "FixItems",
 }
 
 EXCLUDE_APPS = {

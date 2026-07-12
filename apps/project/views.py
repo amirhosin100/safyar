@@ -98,8 +98,8 @@ class MainPartListView(generics.ListAPIView):
 class ProjectScheduleListView(APIView):
     permission_classes = (HasBranch,)
 
-    def post(self, request):
-        serializer = ScheduleRequestSerializer(data=request.data)
+    def get(self, request):
+        serializer = ScheduleRequestSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
 
         branch_id = serializer.validated_data['branch_id']
@@ -133,7 +133,7 @@ class ProjectScheduleListView(APIView):
                 continue
             times[str_time] = set()
 
-            while time <= branch.closed_time:
+            while time < branch.closed_time:
                 times[str_time].add(time.strftime("%H:%M"))
                 minutes = time.minute + time.hour * 60 + 30
                 time = datetime.time(minute=minutes % 60, hour=minutes // 60)
