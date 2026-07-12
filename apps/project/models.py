@@ -1,4 +1,6 @@
 from django.db import models
+from rest_framework.exceptions import ValidationError
+
 from apps.core.models import BaseModel
 from apps.project.choices import FuelTypeChoices, FixTypeChoices, ProjectStatusChoices, TemporalChoices
 
@@ -50,6 +52,11 @@ class Project(BaseModel):
         default=0,
         editable=False
     )
+    reason_of_cancelled = models.TextField(
+        verbose_name=_("Reason Of Cancelled"),
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         verbose_name = _("Project")
@@ -66,6 +73,10 @@ class Project(BaseModel):
     def save(self, *args, **kwargs):
         branch = Branch.objects.get(id=self.branch_id)
         self.smoothing = branch.smoothing
+
+        if self.status != ProjectStatusChoices.CANCELED and self.reason_of_cancelled:
+            raise ValidationError(_("You just can write reason when status is CANCELED"))
+
         super().save(*args, **kwargs)
 
 

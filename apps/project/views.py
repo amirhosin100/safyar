@@ -1,13 +1,20 @@
+import datetime
+
+from django.utils import timezone
 from rest_framework import status, generics
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.core.base_classes.base_viewset import BaseProtectionViewSet
 from apps.core.permissions import HasBranch
 from apps.project.models import Project, MainPart, ProjectImage, FixItem
-from apps.project.serializers import ProjectSerializer, FixItemSerializer, MainPartSerializer, ProjectImageSerializer
+from apps.project.serializers import ProjectSerializer, FixItemSerializer, MainPartSerializer, ProjectImageSerializer, \
+    ScheduleRequestSerializer
 from django.utils.translation import gettext_lazy as _
+
+from apps.smoothing.models import Branch
 
 
 # TODO write some tests for these
@@ -86,3 +93,67 @@ class MainPartListView(generics.ListAPIView):
     queryset = MainPart.objects.prefetch_related("areas")
     serializer_class = MainPartSerializer
     permission_classes = (IsAuthenticated,)
+
+
+class ProjectScheduleListView(APIView):
+    permission_classes = (HasBranch,)
+
+    def post(self, request):
+        serializer = ScheduleRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        branch_id = serializer.validated_data['branch_id']
+        month = int(serializer.validated_data['month'])
+        year = int(serializer.validated_data['year'])
+
+        try:
+            branch = Branch.objects.get(id=branch_id)
+        except Branch.DoesNotExist:
+            return Response(
+                data={"detail": _("Branch not found")},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        self.check_object_permissions(request, branch)
+
+        if branch.open_time is None or branch.closed_time is None:
+            return Response(
+                {"detail": _("This branch has not open or closed time.,Please Set these Fields")},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        start_date = datetime.datetime(month=month, year=year, day=1)
+        times = {}
+        week_days = branch.get_closed_days()
+
+        while start_date.month == month:
+            time = branch.open_time.replace(second=0, microsecond=0)
+            str_time = start_date.strftime("%Y-%m-%d")
+            if start_date.weekday() in week_days:
+                start_date += datetime.timedelta(days=1)
+                continue
+            times[str_time] = set()
+
+            while time <= branch.closed_time:
+                times[str_time].add(time.strftime("%H:%M"))
+                minutes = time.minute + time.hour * 60 + 30
+                time = datetime.time(minute=minutes % 60, hour=minutes // 60)
+
+            start_date += datetime.timedelta(days=1)
+
+        dates = Project.objects.filter(
+            branch=branch,
+            turn_time__month=month,
+            turn_time__year=year,
+        ).values_list("turn_time", flat=True)
+
+        for date in dates:
+            date = timezone.localtime(date)
+            day = datetime.datetime(month=date.month, year=date.year, day=date.day)
+            day = day.strftime("%Y-%m-%d")
+            hour = datetime.time(hour=date.hour, minute=date.minute)
+            hour = hour.strftime("%H:%M")
+
+            if day in times and hour in times[day]:
+                times[day].remove(hour)
+
+        return Response(data=times, status=status.HTTP_200_OK)

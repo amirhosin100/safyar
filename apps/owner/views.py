@@ -1,9 +1,11 @@
 from rest_framework import viewsets, views
+from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 
 from apps.account.models import User
 from apps.core.permissions import IsSuperUser
-from apps.core.base_classes.base_viewset import BaseProtectionViewSet
+from apps.core.base_classes.base_viewset import BaseProtectionViewSet, BaseAPIView
+from apps.core.utils.pagination import OptionalPageNumberPagination
 
 from apps.owner.models import UsageMethod, Version, SupportInformation, SmsLog
 from apps.owner.serializers import UsageMethodSerializer, VersionSerializer, SupportInformationSerializer, \
@@ -22,10 +24,11 @@ class VersionViewSet(viewsets.ModelViewSet):
     permission_classes = (IsSuperUser,)
 
 
-class SmsLogViewSet(viewsets.ModelViewSet):
-    queryset = SmsLog.objects.all()
+class SmsLogListView(ListAPIView, BaseAPIView):
+    pagination_class = OptionalPageNumberPagination
     serializer_class = SmsLogSerializer
     permission_classes = (IsSuperUser,)
+    queryset = SmsLog.objects.select_related("send_by", "branch__smoothing")
 
 
 class SupportInformationView(views.APIView):

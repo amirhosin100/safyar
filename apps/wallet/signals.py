@@ -9,14 +9,15 @@ from apps.wallet.models import Wallet
 @receiver(pre_save, sender=Wallet)
 def change_wallet_stock_smoothing(sender, instance, **kwargs):
     instance.smoothing.wallet_stock = instance.stock
-    instance.save()
+    instance.smoothing.save()
 
-    if instance.stock < settings.WALLET_EMPTY_STOCK and instance.is_sent_empty_sms:
-        sms_center.send_wallet_stock_empty_sms(instance)
-        instance.is_sent_empty_sms = True
-        return
+    if hasattr(instance.smoothing, "owner_user"):
+        if instance.stock < settings.WALLET_EMPTY_STOCK and not instance.is_sent_empty_sms:
+            sms_center.send_wallet_stock_empty_sms(instance)
+            instance.is_sent_empty_sms = True
+            return
 
-    if instance.stock < settings.WALLET_WARNING_STOCK and instance.is_sent_warning_sms:
-        sms_center.send_wallet_stock_waring_sms(instance)
-        instance.is_sent_warning_sms = True
-        return
+        if instance.stock < settings.WALLET_WARNING_STOCK and not instance.is_sent_warning_sms:
+            sms_center.send_wallet_stock_waring_sms(instance)
+            instance.is_sent_warning_sms = True
+            return

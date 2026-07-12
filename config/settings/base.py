@@ -160,6 +160,7 @@ EXCLUDE_MODELS = {
     "SupportInformation",
     "WalletTransaction",
     "Wallet",
+    "SmsLog",
 }
 
 EXCLUDE_APPS = {

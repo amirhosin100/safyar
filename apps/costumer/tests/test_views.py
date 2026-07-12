@@ -511,7 +511,7 @@ class TestCarView:
         data["color"] = "blue"
 
         api_client.force_authenticate(user=owner_user)
-        response = api_client.put(self.detail_url(car.id), data=data)
+        response = api_client.patch(self.detail_url(car.id), data=data)
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data["color"] == "blue"

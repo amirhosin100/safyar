@@ -45,6 +45,7 @@ car_initial_data = InitialData(
     {
         "plate": "11-الف-555-45",
         "color": "red",
+        "name":"test"
     },
     relation_fields={
         "costumer": costumer_initial_data,
@@ -57,6 +58,7 @@ car_create_data = APIRequestData(
     {
         "plate": "12-الف-555-45",
         "color": "red",
+        "name":"test"
     },
     relation_fields={
         "costumer": costumer_initial_data,

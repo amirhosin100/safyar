@@ -153,10 +153,10 @@ class SendSingleSMSAPIView(APIView):
             costumer = Costumer.objects.get(pk=costumer_id)
         except Costumer.DoesNotExist:
             return Response({
-                "detail": _("costumer does not exist")
-            })
+                "detail": _("costumer does not exist"),
+            },status=status.HTTP_404_NOT_FOUND)
 
-        if costumer.branch not in request.user.allowed_branches:
+        if costumer.branch not in request.user.allowed_branches.all():
             return Response(
                 {"detail": _("you don't have permission to send sms messages for this costumer"), },
                 status=status.HTTP_403_FORBIDDEN

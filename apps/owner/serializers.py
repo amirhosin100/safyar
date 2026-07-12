@@ -18,9 +18,23 @@ class VersionSerializer(serializers.ModelSerializer):
 
 
 class SmsLogSerializer(serializers.ModelSerializer):
+    user_full_name = serializers.SerializerMethodField()
+    user_national_code = serializers.SerializerMethodField()
+    smoothing_name = serializers.SerializerMethodField()
+
     class Meta:
         model = SmsLog
         exclude = ("deleted",)
+
+
+    def get_user_full_name(self, obj):
+        return obj.send_by.full_name
+
+    def get_user_national_code(self, obj):
+        return obj.send_by.national_code
+
+    def get_smoothing_name(self, obj):
+        return obj.branch.smoothing.name
 
 
 class SupportInformationSerializer(serializers.ModelSerializer):

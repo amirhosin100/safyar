@@ -145,6 +145,17 @@ class Branch(BaseModel):
     def __str__(self):
         return self.name
 
+    def get_closed_days(self):
+        match self.closed_days:
+            case ClosedDayChoices.NO_DAYS_OFF:
+                return []
+            case ClosedDayChoices.FRIDAY:
+                return [4]
+            case ClosedDayChoices.THURSDAY:
+                return [3]
+            case ClosedDayChoices.FRIDAY_AND_THURSDAY:
+                return [4, 3]
+
 
 class Colleague(BaseModel):
     branch = models.ForeignKey(

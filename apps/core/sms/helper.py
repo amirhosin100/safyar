@@ -41,7 +41,7 @@ def schedule_bulk_sms(phone_numbers, message):
         result = sms_class.send_bulk_sms(phone_numbers, message)
         results.append(result)
         if result:
-            redis.hdel(prefix.sms_bulk.format(id=random_key), counter + 1)
+            redis.hdel(prefix.sms_bulk.format(id=random_key), counter)
 
     return results
 

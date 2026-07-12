@@ -1,3 +1,4 @@
+from django.core.validators import RegexValidator
 from rest_framework import serializers
 from apps.project.models import Project, MainPart, FixArea, ProjectImage, FixItem
 
@@ -42,7 +43,7 @@ class ProjectImageSerializer(serializers.ModelSerializer):
 class FixAreaSerializer(serializers.ModelSerializer):
     class Meta:
         model = FixArea
-        fields = ["name", "id"]
+        fields = ["name", "id", "main_part"]
 
 
 class MainPartSerializer(serializers.ModelSerializer):
@@ -51,3 +52,9 @@ class MainPartSerializer(serializers.ModelSerializer):
     class Meta:
         model = MainPart
         fields = ["name", "fix_areas", ]
+
+
+class ScheduleRequestSerializer(serializers.Serializer):
+    year = serializers.CharField(validators=[RegexValidator(regex=r"^\d{4}$")])
+    month = serializers.CharField(validators=[RegexValidator(regex=r"^0|1?\d$")])
+    branch_id = serializers.BigIntegerField()

@@ -7,5 +7,5 @@ user_initial_data = InitialData(
         "national_code": "1238867890",
         "phone_number": "09121234567",
         "full_name": "علی محمدی",
-    },
+    }
 )
