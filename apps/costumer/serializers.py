@@ -11,6 +11,18 @@ class CostumerSerializer(serializers.ModelSerializer):
 
 
 class CarSerializer(serializers.ModelSerializer):
+    costumer = CostumerSerializer(many=False, read_only=True)
+
     class Meta:
         model = Car
-        exclude = ("deleted",)
+        fields = (
+            "id",
+            "costumer",
+            "plate",
+            "color",
+            "name"
+        )
+
+
+class CarSimpleSerializer(CarSerializer):
+    pass

@@ -58,7 +58,7 @@ class UserLoginView(APIView):
         if not user.check_password(serializer.validated_data["password"]):
             return self.user_not_found()
 
-        if not user.is_active():
+        if not user.is_active:
             return Response({"detail": _("user is inactive")}, status=status.HTTP_403_FORBIDDEN)
 
         tokens = get_tokens_for_user(user)
@@ -156,15 +156,14 @@ class ResetPasswordView(APIView):
 class UserListCreateView(BaseAPIView):
     permission_classes = (IsSuperUser | IsNotNormalUser & HasBranch,)
     serializer_class = UserCreationSerializer
-    queryset = User.objects.all()
+    queryset = User.objects.prefetch_related("allowed_branches")
 
     def post(self, request):
         serializer = UserCreationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        branch = serializer.validated_data["active_branch"]
-        self.check_object_permissions(request, branch)
 
-        serializer.create(serializer.validated_data)
+        user = serializer.create(serializer.validated_data)
+        serializer.instance = user
 
         return Response(
             data=serializer.data,

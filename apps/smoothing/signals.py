@@ -28,7 +28,7 @@ def update_allowed_branches_of_user(sender, instance, created, **kwargs):
 
 @receiver(pre_save, sender=Smoothing)
 def update_user_is_smoothing_active(sender, instance, **kwargs):
-    if not instance.pk and hasattr(instance, "_pre_is_active"):
+    if not (instance.pk and hasattr(instance, "_pre_is_active")):
         return
 
     if instance.is_active != instance._pre_is_active:

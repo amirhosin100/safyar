@@ -67,6 +67,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
+            "id",
             "full_name",
             "national_code",
             "phone_number",
@@ -111,6 +112,9 @@ class UserCreationSerializer(UserDetailSerializer):
         )
         user.set_password(validated_data["password"])
         user.save()
+
+        branch_pks = [branch.pk for branch in validated_data["allowed_branches"]]
+        user.allowed_branches.set(branch_pks)
 
         return user
 

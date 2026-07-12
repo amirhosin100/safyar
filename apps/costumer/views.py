@@ -11,7 +11,7 @@ from apps.costumer.models import Costumer, Car
 
 class CostumerViewSet(FilterByBranchViewSet):
     serializer_class = CostumerSerializer
-    queryset = Costumer.objects.all()
+    queryset = Costumer.objects.prefetch_related("cars")
 
     def perform_create(self, serializer):
         branch = self.request.user.active_branch

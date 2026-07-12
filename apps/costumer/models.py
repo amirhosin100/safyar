@@ -47,6 +47,10 @@ class Car(BaseModel):
         verbose_name=_("Costumer"),
         related_name="cars",
     )
+    name = models.CharField(
+        max_length=255,
+        verbose_name=_("Name"),
+    )
     plate = models.CharField(
         max_length=30,
         verbose_name=_("Plate"),
@@ -63,7 +67,6 @@ class Car(BaseModel):
 
     def __str__(self):
         return self.plate
-
 
     @property
     def branch(self):

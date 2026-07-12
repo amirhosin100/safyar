@@ -8,6 +8,7 @@ from apps.account.models import User, OwnerRequest
 from unittest.mock import patch
 
 from apps.smoothing.models import Smoothing, Branch
+from apps.smoothing.tests.fixtures.data import branch_initial_data
 
 pytestmark = pytest.mark.django_db
 
@@ -73,14 +74,14 @@ class TestUserLogin:
         assert "error" in response.data
         assert response.data["error"] == "username or password is incorrect"
 
-    def test_inactive_user_returns_404(self, api_client, inactive_user):
+    def test_inactive_user_returns_403(self, api_client, inactive_user):
         payload = {
             "national_code": inactive_user.national_code,
             "password": "StrongPass@123",
         }
         response = api_client.post(LOGIN_URL, payload)
-        assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert "error" in response.data
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert "detail" in response.data
         assert "access" not in response.data
 
     def test_missing_national_code_returns_400(self, api_client):
@@ -124,7 +125,7 @@ class TestRegisterView:
         assert user.user_type == UserTypeChoices.OWNER
 
     # ── Duplicate fields ──────────────────────────────────────────────────────
-    def test_duplicate_national_code_returns_400(self, api_client,create_user):
+    def test_duplicate_national_code_returns_400(self, api_client, create_user):
         """Registering again with the same national code should return 400."""
         create_user(
             national_code="1212880099",
@@ -137,7 +138,7 @@ class TestRegisterView:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "error" in response.data
 
-    def test_duplicate_phone_number_returns_400(self, api_client,normal_user,create_user):
+    def test_duplicate_phone_number_returns_400(self, api_client, normal_user, create_user):
         """Registering with a duplicate phone number should return 400."""
         create_user(
             national_code="9999999999",
@@ -248,7 +249,7 @@ class TestCreateUser:
             "active_branch": branch.id,
             "national_code": "0987612345",
             "phone_number": "09876512341",
-            "user_type": UserTypeChoices.NORMAL,
+            "user_type": UserTypeChoices.ADMIN,
             "allowed_branches": [branch.id],
             "password": "123456",
         }
@@ -261,6 +262,20 @@ class TestCreateUser:
 
         assert response.status_code == status.HTTP_201_CREATED
         assert User.objects.count() == user_count + 1
+        assert User.objects.get(pk=response.data["id"]).allowed_branches.count() == 1
+
+    def test_with_allowed_branches(self, api_client, super_user, owner_user):
+        branch = branch_initial_data.create_object()
+
+        api_client.force_authenticate(user=owner_user)
+        data = self.create_data(owner_user.active_branch)
+        data["allowed_branches"].append(branch.id)
+        data["active_branch"] = branch.id
+
+        response = api_client.post(self.url, data)
+        assert response.status_code == status.HTTP_201_CREATED
+        assert User.objects.get(pk=response.data["id"]).allowed_branches.count() == 2
+        assert User.objects.get(pk=response.data["id"]).active_branch == branch
 
     def test_users(self, api_client, owner_user, super_user):
         for user, count, status_code in ((owner_user, 0, 403), (super_user, 1, 201)):
@@ -349,7 +364,6 @@ def other_branch_user():
     )
     user.allowed_branches.add(branch)
     return user
-
 
 
 class TestUserUpdateDeleteView:

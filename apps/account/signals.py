@@ -10,7 +10,7 @@ from apps.core.sms import sms_center
 
 @receiver(pre_save, sender=OwnerRequest)
 def invalid_change_status_from_accepted_to_rejected(sender, instance, **kwargs):
-    if not instance.pk and hasattr(instance, "_pre_status"):
+    if not (instance.pk and hasattr(instance, "_pre_status")):
         return
 
     if instance.status != instance._pre_status:

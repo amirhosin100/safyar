@@ -316,7 +316,7 @@ class TestCarView:
         costumer = cls._create_costumer_for_branch(branch)
         return Car.objects.create(
             costumer=costumer,
-            plate="11-\u0646-555-45",
+            plate="11-الف-555-45",
             color="red",
         )
 

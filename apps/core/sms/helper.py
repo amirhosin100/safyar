@@ -25,6 +25,7 @@ def schedule_bulk_sms(phone_numbers, message):
     list_phone_numbers = []
     random_key = str(uuid.uuid4())
     data = {"message": message}
+    results = []
 
     counter = 0
     while phone_numbers:
@@ -38,9 +39,11 @@ def schedule_bulk_sms(phone_numbers, message):
 
     for counter, phone_numbers in enumerate(list_phone_numbers):
         result = sms_class.send_bulk_sms(phone_numbers, message)
+        results.append(result)
         if result:
             redis.hdel(prefix.sms_bulk.format(id=random_key), counter + 1)
 
+    return results
 
 def get_not_sent_sms():
     keys = redis.keys(prefix.sms_bulk_all)
