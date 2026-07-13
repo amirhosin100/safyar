@@ -2,6 +2,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from apps.core.wallet import WalletCenter
 
 from apps.core.base_classes.base_viewset import BaseProtectionViewSet
 from apps.core.permissions import IsSuperUser, IsNotNormalUser, HasBranch, IsOwner, IsOwnerOrSuperUser
@@ -106,7 +107,6 @@ class BranchAPIView(APIView):
         return self.edit(request, partial=True)
 
 
-# TODO add decrease wallet
 class SendBulkSMSAPIView(APIView):
     permission_classes = (IsOwnerOrSuperUser,)
 
@@ -118,6 +118,9 @@ class SendBulkSMSAPIView(APIView):
         phone_numbers = Costumer.objects.filter(
             branch__smoothing=request.user.smoothing,
         ).values_list("phone_number", flat=True)
+
+        wallet_center = WalletCenter(request.user.smoothing.wallet)
+        wallet_center.decrease_bulk_sms(len(phone_numbers))
 
         result = schedule_bulk_sms(phone_numbers, message)
 
@@ -164,13 +167,14 @@ class SendSingleSMSAPIView(APIView):
 
         result = sms_class.send_single_sms(costumer.phone_number, message)
 
+        wallet_center = WalletCenter(request.user.active_branch.smoothing.wallet)
+        wallet_center.decrease_single_sms()
+
         if not result:
             return Response(
-                {"detail": _("messages didn't send")},
+                {"detail": _("message didn't send")},
                 status=status.HTTP_400_BAD_REQUEST
             )
         SmsLog.objects.create_log(user=request.user, message=message, sms_type=SmsTypeChoices.SINGLE)
 
-        return Response({
-            "detail": _("messages sent successfully"),
-        })
+        return Response({"detail": _("messages sent successfully")})

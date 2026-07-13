@@ -2,13 +2,15 @@ import datetime
 
 from django.utils import timezone
 from rest_framework import status, generics
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.base_classes.base_viewset import BaseProtectionViewSet
 from apps.core.permissions import HasBranch
+from apps.core.wallet import WalletCenter
+from apps.project.choices import ProjectStatusChoices
 from apps.project.models import Project, MainPart, ProjectImage, FixItem
 from apps.project.serializers import ProjectSerializer, FixItemSerializer, MainPartSerializer, ProjectImageSerializer, \
     ScheduleRequestSerializer
@@ -34,6 +36,22 @@ class ProjectViewSet(BaseProtectionViewSet):
         user = serializer.context['request'].user
         if car.branch.smoothing != user.active_branch.smoothing and not user.is_superuser:
             raise PermissionDenied(_("You don't have permission to create project for this car"))
+
+        status = serializer.validated_data['status']
+
+        if status == ProjectStatusChoices.DELIVERED:
+            raise ValidationError(_("your choices are `CANCELED` `TURNED` & `SUBMITTED`"))
+
+        wallet = WalletCenter(self.request.user.active_branch.smoothing.wallet)
+
+        match status:
+            case ProjectStatusChoices.CANCELED.value:
+                wallet.decrease_canceled_project()
+            case ProjectStatusChoices.TURNED.value:
+                wallet.decrease_turned_project()
+            case ProjectStatusChoices.SUBMITTED.value:
+                wallet.decrease_accepted_project()
+
         serializer.save()
 
 

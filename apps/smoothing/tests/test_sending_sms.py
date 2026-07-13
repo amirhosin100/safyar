@@ -79,8 +79,8 @@ class TestSendBulkSMSAPIView:
         phone_numbers = list(range(110))
         log_count = SmsLog.objects.count()
 
-        with patch("apps.smoothing.views.Costumer.objects.filter.values_list") as values_mock:
-            values_mock.return_value = phone_numbers
+        with patch("apps.smoothing.views.Costumer.objects.filter") as filter_mock:
+            filter_mock.return_value.values_list.return_value = phone_numbers
             with patch("apps.core.sms.sms_class.send_bulk_sms") as mock:
                 response = api_client.post(self.url, data={"message": "test_message"})
 
@@ -111,8 +111,8 @@ class TestSendBulkSMSAPIView:
         phone_numbers = list(range(110))
         log_count = SmsLog.objects.count()
 
-        with patch("apps.smoothing.views.Costumer.objects.filter.values_list") as values_mock:
-            values_mock.return_value = phone_numbers
+        with patch("apps.smoothing.views.Costumer.objects.filter") as filter_mock:
+            filter_mock.return_value.values_list.return_value = phone_numbers
             with patch("apps.core.sms.sms_class.send_bulk_sms", side_effect=[True, False]):
                 response = api_client.post(self.url, data={"message": "test_message"})
 
@@ -173,6 +173,8 @@ class TestSendSingleSMSAPIView:
     def _create_costumer_for_branch(branch):
         costumer = costumer_initial_data.create_object()
         costumer.branch = branch
+        costumer.branch.smoothing.wallet.stock = 200000
+        costumer.branch.smoothing.wallet.save()
         costumer.save()
         return costumer
 

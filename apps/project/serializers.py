@@ -1,6 +1,8 @@
 from django.core.validators import RegexValidator
 from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
+
+from apps.project.choices import ProjectStatusChoices
 from apps.project.models import Project, MainPart, FixArea, ProjectImage, FixItem
 from apps.smoothing.models import Branch
 from django.utils.translation import gettext_lazy as _

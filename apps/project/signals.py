@@ -1,4 +1,5 @@
 from apps.core.sms import sms_center
+from apps.core.wallet import WalletCenter
 from apps.project.choices import ProjectStatusChoices
 from apps.project.models import Project
 from django.db.models.signals import post_save

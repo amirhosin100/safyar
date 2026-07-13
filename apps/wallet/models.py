@@ -13,6 +13,7 @@ class Wallet(BaseModel):
     )
     stock = models.PositiveBigIntegerField(
         verbose_name=_("Stock"),
+        help_text=_("unit is Rial")
     )
     is_sent_warning_sms = models.BooleanField(
         default=False,
@@ -31,6 +32,13 @@ class Wallet(BaseModel):
 
     def __str__(self):
         return f"{str(self.smoothing)} - {self.stock}"
+
+    def decrease(self, amount):
+        self.stock -= amount
+        if self.stock < 0:
+            return False
+        self.save()
+        return True
 
 
 class WalletTransaction(BaseModel):
