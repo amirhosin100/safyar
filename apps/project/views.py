@@ -19,7 +19,6 @@ from django.utils.translation import gettext_lazy as _
 from apps.smoothing.models import Branch
 
 
-# TODO write some tests for these
 class ProjectViewSet(BaseProtectionViewSet):
     queryset = Project.objects.prefetch_related("items")
     serializer_class = ProjectSerializer

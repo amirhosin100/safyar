@@ -1,4 +1,7 @@
+import datetime
+
 from django.core.validators import RegexValidator
+from django.utils.dateparse import parse_datetime
 from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 
@@ -33,10 +36,33 @@ class ProjectSerializer(serializers.ModelSerializer):
             "items",
         ]
 
-    def validate_turn_time(self, value):
-        if value is not None and value.minute not in [0, 30]:
-            raise ValidationError(_("turn_time must be 0 or 30"))
-        return value
+    def validate(self, attrs):
+        if "turn_time" not in attrs:
+            return attrs
+
+        turn_time = attrs["turn_time"]
+        branch = attrs["branch"]
+
+        closed_time = branch.closed_time
+        open_time = branch.open_time
+
+        if closed_time is None or open_time is None:
+            raise ValidationError(_("You must declare closed_time and open_time for branch and save project"))
+
+        if turn_time is not None:
+            turn_time = parse_datetime(str(turn_time))
+            turn_time = turn_time.replace(microsecond=0, second=0)
+
+            if turn_time.minute not in [0, 30]:
+                raise ValidationError(_("turn_time must be 0 or 30"))
+
+            time = datetime.time(hour=turn_time.hour, minute=turn_time.minute)
+            if not (closed_time >= time >= open_time):
+                raise ValidationError(_("turn_time must between %s and %s") % (str(open_time), str(closed_time)))
+
+            attrs["turn_time"] = str(turn_time)
+
+        return attrs
 
 
 class ProjectImageSerializer(serializers.ModelSerializer):
@@ -53,15 +79,15 @@ class ProjectImageSerializer(serializers.ModelSerializer):
 class FixAreaSerializer(serializers.ModelSerializer):
     class Meta:
         model = FixArea
-        fields = ["name", "id", "main_part"]
+        fields = ["name", "id"]
 
 
 class MainPartSerializer(serializers.ModelSerializer):
-    fix_areas = FixAreaSerializer(many=True, read_only=True)
+    areas = FixAreaSerializer(many=True, read_only=True)
 
     class Meta:
         model = MainPart
-        fields = ["name", "fix_areas"]
+        fields = ["name", "areas"]
 
 
 class ScheduleRequestSerializer(serializers.Serializer):

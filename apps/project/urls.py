@@ -6,7 +6,7 @@ from apps.project.views import (
 app_name = 'project'
 
 urlpatterns = [
-    path("project/main-parts/", MainPartListView.as_view(), name="main-parts"),
+        path("project/main-parts/", MainPartListView.as_view(), name="main-parts"),
         path("project/schedules/",ProjectScheduleListView.as_view(), name="schedules"),
 ]
 

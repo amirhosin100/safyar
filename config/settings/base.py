@@ -162,7 +162,7 @@ EXCLUDE_MODELS = {
     "Wallet",
     "SmsLog",
     "FixArea",
-    "FixItems",
+    "MainPart",
 }
 
 EXCLUDE_APPS = {

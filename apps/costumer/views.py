@@ -1,5 +1,5 @@
 from django.db import IntegrityError
-from rest_framework import status, serializers
+from rest_framework import status, serializers, generics
 from rest_framework.response import Response
 from django.utils.translation import gettext_lazy as _
 from rest_framework.views import APIView
@@ -36,6 +36,12 @@ class CarViewSet(FilterByBranchViewSet):
         serializer.save()
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def get_queryset(self):
+        #TODO test it
+        if costumer_id := self.request.query_params.get('costumer_id'):
+            return super().get_queryset().filter(costumer_id=costumer_id)
+        return super().get_queryset()
 
 
 class AddCostumerView(APIView):

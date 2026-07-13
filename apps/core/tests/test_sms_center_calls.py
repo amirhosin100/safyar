@@ -34,7 +34,13 @@ class TestProjectSmsCenterCalls:
         return self.urls[0](pk)
 
     @staticmethod
-    def _create_car_for_branch(branch):
+    def _add_stock(branch):
+        branch.smoothing.wallet.stock = 999999
+        branch.smoothing.wallet.save()
+
+    def _create_car_for_branch(self, branch):
+        # add stock
+        self._add_stock(branch)
         car = car_initial_data.create_object()
         car.costumer.branch = branch
         car.costumer.save()
@@ -54,9 +60,9 @@ class TestProjectSmsCenterCalls:
         api_client.force_authenticate(owner_user)
 
         with patch.object(
-            sms_center, "send_canceled_project_sms", wraps=sms_center.send_canceled_project_sms
+                sms_center, "send_canceled_project_sms", wraps=sms_center.send_canceled_project_sms
         ) as center_mock, \
-             patch("apps.core.sms.sms_class.send_single_sms", return_value=True) as send_mock:
+                patch("apps.core.sms.sms_class.send_single_sms", return_value=True) as send_mock:
             response = api_client.post(self.list_create_url, data=data)
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -73,9 +79,9 @@ class TestProjectSmsCenterCalls:
         api_client.force_authenticate(owner_user)
 
         with patch.object(
-            sms_center, "send_accepted_project_sms", wraps=sms_center.send_accepted_project_sms
+                sms_center, "send_accepted_project_sms", wraps=sms_center.send_accepted_project_sms
         ) as center_mock, \
-             patch("apps.core.sms.sms_class.send_single_sms", return_value=True) as send_mock:
+                patch("apps.core.sms.sms_class.send_single_sms", return_value=True) as send_mock:
             response = api_client.post(self.list_create_url, data=data)
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -92,9 +98,9 @@ class TestProjectSmsCenterCalls:
         api_client.force_authenticate(owner_user)
 
         with patch.object(
-            sms_center, "send_turned_project_sms", wraps=sms_center.send_turned_project_sms
+                sms_center, "send_turned_project_sms", wraps=sms_center.send_turned_project_sms
         ) as center_mock, \
-             patch("apps.core.sms.sms_class.send_single_sms", return_value=True) as send_mock:
+                patch("apps.core.sms.sms_class.send_single_sms", return_value=True) as send_mock:
             response = api_client.post(self.list_create_url, data=data)
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -114,9 +120,9 @@ class TestProjectSmsCenterCalls:
         api_client.force_authenticate(owner_user)
 
         with patch.object(sms_center, "send_canceled_project_sms") as canceled_mock, \
-             patch.object(sms_center, "send_accepted_project_sms") as accepted_mock, \
-             patch.object(sms_center, "send_turned_project_sms") as turned_mock, \
-             patch("apps.core.sms.sms_class.send_single_sms", return_value=True) as send_mock:
+                patch.object(sms_center, "send_accepted_project_sms") as accepted_mock, \
+                patch.object(sms_center, "send_turned_project_sms") as turned_mock, \
+                patch("apps.core.sms.sms_class.send_single_sms", return_value=True) as send_mock:
             response = api_client.post(self.list_create_url, data=data)
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -133,7 +139,7 @@ class TestProjectSmsCenterCalls:
         api_client.force_authenticate(owner_user)
 
         with patch.object(sms_center, "send_turned_project_sms") as center_mock, \
-             patch("apps.core.sms.sms_class.send_single_sms", return_value=True) as send_mock:
+                patch("apps.core.sms.sms_class.send_single_sms", return_value=True) as send_mock:
             response = api_client.patch(self.detail_url(project.pk), data={"kilometer_of_car": 999})
 
         assert response.status_code == status.HTTP_200_OK
@@ -160,10 +166,10 @@ class TestRegisterSmsCenterCalls:
         data = self._payload("1212880099", "09823567890")
 
         with patch.object(
-            sms_center, "send_register_sms", wraps=sms_center.send_register_sms
+                sms_center, "send_register_sms", wraps=sms_center.send_register_sms
         ) as register_center_mock, \
-             patch.object(sms_center, "send_register_smoothing_for_super_user") as super_center_mock, \
-             patch("apps.core.sms.sms_class.send_single_sms", return_value=True) as send_mock:
+                patch.object(sms_center, "send_register_smoothing_for_super_user") as super_center_mock, \
+                patch("apps.core.sms.sms_class.send_single_sms", return_value=True) as send_mock:
             response = client.post(self.url, data)
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -181,14 +187,14 @@ class TestRegisterSmsCenterCalls:
         data = self._payload("1212880098", "09823567891")
 
         with patch.object(
-            sms_center, "send_register_sms", wraps=sms_center.send_register_sms
+                sms_center, "send_register_sms", wraps=sms_center.send_register_sms
         ) as register_center_mock, \
-             patch.object(
-                 sms_center,
-                 "send_register_smoothing_for_super_user",
-                 wraps=sms_center.send_register_smoothing_for_super_user,
-             ) as super_center_mock, \
-             patch("apps.core.sms.sms_class.send_single_sms", return_value=True) as send_mock:
+                patch.object(
+                    sms_center,
+                    "send_register_smoothing_for_super_user",
+                    wraps=sms_center.send_register_smoothing_for_super_user,
+                ) as super_center_mock, \
+                patch("apps.core.sms.sms_class.send_single_sms", return_value=True) as send_mock:
             response = client.post(self.url, data)
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -216,9 +222,9 @@ class TestSmoothingActivationSmsCenterCalls:
 
     def test_deactivating_smoothing_calls_send_smoothing_deactivated_sms(self, api_client, owner_user):
         with patch.object(
-            sms_center, "send_smoothing_deactivated_sms", wraps=sms_center.send_smoothing_deactivated_sms
+                sms_center, "send_smoothing_deactivated_sms", wraps=sms_center.send_smoothing_deactivated_sms
         ) as center_mock, \
-             patch("apps.core.sms.sms_class.send_single_sms", return_value=True) as send_mock:
+                patch("apps.core.sms.sms_class.send_single_sms", return_value=True) as send_mock:
             response = api_client.patch(self.detail_url(owner_user.smoothing.pk), data={"is_active": False})
 
         assert response.status_code == status.HTTP_200_OK
@@ -234,9 +240,9 @@ class TestSmoothingActivationSmsCenterCalls:
         owner_user.smoothing.save()
 
         with patch.object(
-            sms_center, "send_smoothing_activated_sms", wraps=sms_center.send_smoothing_activated_sms
+                sms_center, "send_smoothing_activated_sms", wraps=sms_center.send_smoothing_activated_sms
         ) as center_mock, \
-             patch("apps.core.sms.sms_class.send_single_sms", return_value=True) as send_mock:
+                patch("apps.core.sms.sms_class.send_single_sms", return_value=True) as send_mock:
             response = api_client.patch(self.detail_url(owner_user.smoothing.pk), data={"is_active": True})
 
         assert response.status_code == status.HTTP_200_OK
@@ -249,8 +255,8 @@ class TestSmoothingActivationSmsCenterCalls:
 
     def test_updating_unrelated_field_does_not_trigger_activation_sms(self, api_client, owner_user):
         with patch.object(sms_center, "send_smoothing_deactivated_sms") as deactivated_mock, \
-             patch.object(sms_center, "send_smoothing_activated_sms") as activated_mock, \
-             patch("apps.core.sms.sms_class.send_single_sms", return_value=True) as send_mock:
+                patch.object(sms_center, "send_smoothing_activated_sms") as activated_mock, \
+                patch("apps.core.sms.sms_class.send_single_sms", return_value=True) as send_mock:
             response = api_client.patch(self.detail_url(owner_user.smoothing.pk), data={"name": "renamed shop"})
 
         assert response.status_code == status.HTTP_200_OK

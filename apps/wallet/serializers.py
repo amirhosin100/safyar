@@ -44,5 +44,13 @@ class AddStockWalletSerializer(serializers.ModelSerializer):
         return amount
 
 
+class WalletSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Wallet
+        fields = [
+            "stock",
+        ]
+
+
 class ChargeWalletSerializer(serializers.Serializer):
     amount = serializers.BigIntegerField()

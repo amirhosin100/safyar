@@ -4,7 +4,7 @@ from apps.wallet.views import (
     WalletTransactionListView,
     WalletTransactionSuperUserListView,
     AddStockWalletView,
-    ChargeWalletView
+    ChargeWalletView, WalletInfoView
 )
 
 app_name = "wallet"
@@ -15,4 +15,5 @@ urlpatterns = [
     path("wallet/transcations/", WalletTransactionListView.as_view(), name="transaction-list"),
     path("wallet/transcation/<int:pk>/", WalletTransactionRetrieveView.as_view(), name="transaction-retrieve"),
     path("wallet/charge/", ChargeWalletView.as_view(), name="charge-user-wallet"),
+    path("wallet/", WalletInfoView.as_view(), name="wallet-info"),
 ]

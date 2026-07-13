@@ -11,7 +11,7 @@ from apps.wallet.choices import TransactionStatusChoices, TransactionTypeChoices
 from apps.wallet.models import WalletTransaction, Wallet
 from apps.wallet.serializers import (
     WalletTransactionSuperUserSerializer,
-    WalletTransactionSerializer, AddStockWalletSerializer, ChargeWalletSerializer
+    WalletTransactionSerializer, AddStockWalletSerializer, ChargeWalletSerializer, WalletSerializer
 )
 
 
@@ -77,12 +77,23 @@ class AddStockWalletView(APIView):
         return Response(res_serializer.data)
 
 
+class WalletInfoView(APIView):
+    permission_classes = (HasBranch,)
+    serializer_class = WalletSerializer
+
+    def get(self, request):
+        wallet = request.user.active_branch.smoothing.wallet
+        serializer = WalletSerializer(instance=wallet)
+
+        return Response(serializer.data)
+
+
 class ChargeWalletView(APIView):
     # TODO edit this
     permission_classes = (IsAuthenticated,)
     serializer_class = ChargeWalletSerializer
 
-    def post(self,request):
+    def post(self, request):
         serializer = ChargeWalletSerializer(request.data)
         serializer.is_valid(raise_exception=True)
 

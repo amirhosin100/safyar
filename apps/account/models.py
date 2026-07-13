@@ -130,8 +130,6 @@ class User(AbstractBaseUser, PermissionsMixin):
         if self.smoothing:
             self.allowed_branches.set(self.smoothing.branches.all())
 
-        # TODO write a validation for check allowed_branches
-
         first_branch = self.allowed_branches.first()
 
         if self.active_branch is None and first_branch is not None:

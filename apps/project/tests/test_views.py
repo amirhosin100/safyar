@@ -1,4 +1,5 @@
 import pytest
+from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 
@@ -11,6 +12,16 @@ from apps.project.tests.fixtures.data import project_initial_data
 from apps.smoothing.tests.fixtures.data import branch_initial_data
 
 pytestmark = pytest.mark.django_db
+
+
+class TestMainPartView:
+    url = reverse("project:main-parts")
+
+    def test_correct(self,api_client):
+        response = api_client.get(self.url)
+        assert response.status_code == status.HTTP_200_OK
+        assert "areas" in response.data[0]
+
 
 
 class TestProjectView(BaseTestModel):

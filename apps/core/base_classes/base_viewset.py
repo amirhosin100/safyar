@@ -73,4 +73,4 @@ class FilterByBranchViewSet(BaseProtectionViewSet):
     branch_prefix = "branch"
 
     def get_queryset(self):
-        return self.queryset.filter(**{self.branch_prefix: self.request.user.active_branch})
+        return super().get_queryset().filter(**{self.branch_prefix: self.request.user.active_branch})

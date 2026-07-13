@@ -19,6 +19,7 @@ def load_main_parts(file_path: Path = MAIN_PART_DATA_FILE) -> dict:
     """
     with open(file_path, encoding="utf-8") as f:
         data = json.load(f)
+        print(data)
 
     main_parts_created = 0
     fix_areas_created = 0

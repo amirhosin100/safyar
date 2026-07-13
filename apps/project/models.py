@@ -1,8 +1,7 @@
-import datetime
 
-from django.utils.dateparse import parse_datetime
 from django.db import models
 from rest_framework.exceptions import ValidationError
+from django.utils import timezone
 
 from apps.core.models import BaseModel
 from apps.core.validations import validate_image_size_10m, image_format_validator
@@ -62,6 +61,7 @@ class Project(BaseModel):
         blank=True,
     )
 
+
     class Meta:
         verbose_name = _("Project")
         verbose_name_plural = _("Projects")
@@ -82,20 +82,11 @@ class Project(BaseModel):
         if self.status != ProjectStatusChoices.CANCELED and self.reason_of_cancelled:
             raise ValidationError(_("You just can write reason when status is CANCELED"))
 
-        if self.turn_time is not None:
-            self.turn_time = parse_datetime(str(self.turn_time))
-            self.turn_time = self.turn_time.replace(microsecond=0,second=0)
+        if self.status == ProjectStatusChoices.TURNED and self.turn_time is None:
+            raise ValidationError(_("you cannot make a project width turned status and turn_time is null"))
 
-        closed_time = branch.closed_time
-        open_time = branch.open_time
-
-        if closed_time is None or open_time is None:
-            raise ValidationError(_("You must declare closed_time and open_time for branch and save projetc"))
-
-        time = datetime.time(hour=self.turn_time.hour, minute=self.turn_time.minute)
-
-        if not (closed_time >= time >= open_time):
-            raise ValidationError(_("turn_time must between %s and %s") % (str(open_time), str(closed_time)))
+        if self.turn_time is None:
+            self.turn_time = timezone.now()
 
         super().save(*args, **kwargs)
 

@@ -3,7 +3,6 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
-from apps.smoothing.models import Smoothing
 from apps.smoothing.tests.fixtures.data import smoothing_initial_data
 from apps.wallet.tests.fixtures.data import wallet_transaction_initial_data
 
