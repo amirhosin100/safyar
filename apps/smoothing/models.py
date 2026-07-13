@@ -121,13 +121,11 @@ class Branch(BaseModel):
     )
     first_follow_up_code = models.PositiveBigIntegerField(
         verbose_name=_("First Follow Up Code"),
-        null=True,
-        blank=True
+        default=0,
     )
     next_follow_up_code = models.PositiveBigIntegerField(
         verbose_name=_("Next Follow Up Code"),
-        null=True,
-        blank=True
+        default=0
     )
     address = models.TextField(
         max_length=1000,
@@ -159,6 +157,13 @@ class Branch(BaseModel):
                 return [3]
             case ClosedDayChoices.FRIDAY_AND_THURSDAY:
                 return [4, 3]
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        instance = super().from_db(db, field_names, values)
+        instance._pre_next_follow_up_code = instance.next_follow_up_code
+        instance._pre_first_follow_up_code = instance.first_follow_up_code
+        return instance
 
 
 class Colleague(BaseModel):

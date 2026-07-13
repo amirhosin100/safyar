@@ -5,9 +5,7 @@ from django.utils.dateparse import parse_datetime
 from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 
-from apps.project.choices import ProjectStatusChoices
 from apps.project.models import Project, MainPart, FixArea, ProjectImage, FixItem
-from apps.smoothing.models import Branch
 from django.utils.translation import gettext_lazy as _
 
 
@@ -34,6 +32,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "status",
             "fee",
             "items",
+            "code",
         ]
 
     def validate(self, attrs):

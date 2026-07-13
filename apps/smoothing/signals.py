@@ -1,8 +1,11 @@
+from django.db.models import Max
 from django.dispatch import receiver
 from django.db.models.signals import post_save, pre_save
+from rest_framework.exceptions import ValidationError
 
 from apps.account.models import User
 from apps.core.sms import sms_center
+from apps.project.models import Project
 from apps.smoothing.models import Smoothing, Branch
 from apps.wallet.models import Wallet
 
@@ -20,10 +23,30 @@ def update_smoothing_stock(sender, instance, created, **kwargs):
 
 
 @receiver(post_save, sender=Branch)
-def update_allowed_branches_of_user(sender, instance, created, **kwargs):
+def update_allowed_branches_of_user(sender, instance, **kwargs):
     if hasattr(instance.smoothing, "owner_user"):
         owner_user = instance.smoothing.owner_user
         owner_user.allowed_branches.add(instance)
+
+
+@receiver(pre_save, sender=Branch)
+def check_codes(sender, instance, **kwargs):
+    # TODO write tests for these
+    if (
+            instance.pk and hasattr(instance, "_pre_next_follow_up_code") and
+            instance.next_follow_up_code != instance._pre_next_follow_up_code
+    ):
+        biggest_code = Project.objects.filter(branch=instance).aggregate(Max("code"))["code__max"]
+        if biggest_code and instance.next_follow_up_code < biggest_code:
+            raise ValidationError(f"next_follow_up_code must be grater then {biggest_code}")
+
+    if (
+            instance.pk and hasattr(instance, "_pre_first_follow_up_code") and
+            instance.first_follow_up_code != instance._pre_first_follow_up_code
+    ):
+        exists = Project.objects.filter(branch=instance).exists()
+        if exists:
+            raise ValidationError(f"You cannot change first_follow_up_code")
 
 
 @receiver(pre_save, sender=Smoothing)

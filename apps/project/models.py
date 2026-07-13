@@ -1,4 +1,3 @@
-
 from django.db import models
 from rest_framework.exceptions import ValidationError
 from django.utils import timezone
@@ -9,7 +8,7 @@ from apps.project.choices import FuelTypeChoices, FixTypeChoices, ProjectStatusC
 
 from django.utils.translation import gettext_lazy as _
 
-from apps.smoothing.models import Branch
+from apps.smoothing.models import Branch, Colleague
 
 
 class Project(BaseModel):
@@ -19,6 +18,13 @@ class Project(BaseModel):
         verbose_name=_("Branch"),
         related_name='projects',
     )
+
+    code = models.BigIntegerField(
+        verbose_name=_("Code"),
+        null=True,
+        blank=True,
+    )
+
     smoothing = models.ForeignKey(
         "smoothing.Smoothing",
         on_delete=models.PROTECT,
@@ -61,6 +67,49 @@ class Project(BaseModel):
         blank=True,
     )
 
+    smoothing_days = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name=_("Smoothing Days"),
+        editable=False
+    )
+    smoothing_price = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name=_("Smoothing Price"),
+        editable=False
+    )
+
+    mask_days = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name=_("Mask Days"),
+        editable=False
+    )
+    mask_price = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name=_("Mask Price"),
+        editable=False
+    )
+
+    paint_days = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name=_("Paint Days"),
+        editable=False
+    )
+    paint_price = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name=_("Paint Price"),
+        editable=False
+    )
+    colleagues = models.ManyToManyField(
+        Colleague,
+        verbose_name=_("Colleagues"),
+        editable=False
+    )
 
     class Meta:
         verbose_name = _("Project")
@@ -70,14 +119,18 @@ class Project(BaseModel):
             models.Index(fields=["status"]),
             models.Index(fields=["created_at"]),
         ]
-        unique_together = ("branch", "turn_time")
+        unique_together = (("branch", "turn_time"), ("branch", "code"))
 
     def __str__(self):
         return f"{self.car} | {self.created_at}"
 
     def save(self, *args, **kwargs):
         branch = Branch.objects.get(id=self.branch_id)
+        self.code = branch.next_follow_up_code
         self.smoothing = branch.smoothing
+
+        branch.next_follow_up_code += 1
+        branch.save()
 
         if self.status != ProjectStatusChoices.CANCELED and self.reason_of_cancelled:
             raise ValidationError(_("You just can write reason when status is CANCELED"))
@@ -89,6 +142,7 @@ class Project(BaseModel):
             self.turn_time = timezone.now()
 
         super().save(*args, **kwargs)
+        # TODO fill the paint_price and etc ...
 
 
 class ProjectImage(BaseModel):
