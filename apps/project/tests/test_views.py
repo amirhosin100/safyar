@@ -29,6 +29,9 @@ class TestProjectView(BaseTestModel):
 
     def test_create_with_owner_user(self, api_client, owner_user, admin_user, normal_user):
         car = car_initial_data.create_object()
+        owner_user.active_branch.smoothing.wallet.stock = 999999
+        owner_user.active_branch.smoothing.wallet.save()
+
         for user in (owner_user, admin_user, normal_user):
             api_client.force_authenticate(user=user)
             user.active_branch = owner_user.active_branch
@@ -48,7 +51,12 @@ class TestProjectView(BaseTestModel):
         car = car_initial_data.create_object()
         car.costumer.branch = owner_user.active_branch
         car.costumer.save()
+
         for user, status_code in ((normal_user, 403), (super_user, 201)):
+            # wallet decreased is the *requesting* user's own active_branch.smoothing.wallet
+            user.active_branch.smoothing.wallet.stock = 999999
+            user.active_branch.smoothing.wallet.save()
+
             api_client.force_authenticate(user)
 
             self.create_data.request_data["car"] = car.id

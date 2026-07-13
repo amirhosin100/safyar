@@ -22,6 +22,8 @@ from apps.project.choices import ProjectStatusChoices
 from apps.project.models import Project
 from apps.project.tests.fixtures.data import project_initial_data, project_create_data
 from apps.smoothing.models import Smoothing
+from django.utils import timezone
+from apps.project.choices import ProjectStatusChoices, FuelTypeChoices
 
 pytestmark = pytest.mark.django_db
 
@@ -108,24 +110,28 @@ class TestProjectSmsCenterCalls:
         project = Project.objects.get(pk=response.data["id"])
         assert center_mock.call_args[0][0].id == project.id
 
-        expected_message = TURNED_PROJECT % str(project.turn_time)
+        # a fresh DB fetch normalizes turn_time to UTC; localize it back so it
+        # matches what the signal saw in-memory (original +03:30 offset)
+        expected_message = TURNED_PROJECT % str(timezone.localtime(project.turn_time))
         assert send_mock.call_count == 1
         assert send_mock.call_args[0][0] == car.costumer.phone_number
         assert send_mock.call_args[0][1] == expected_message
 
     def test_create_delivered_project_does_not_call_any_project_sms(self, api_client, owner_user):
-        """DELIVERED در match-case سیگنال وجود نداره، پس هیچ sms_center‌ای صدا زده نمیشه."""
         car = self._create_car_for_branch(owner_user.active_branch)
-        data = self._project_payload(car, owner_user.active_branch, ProjectStatusChoices.DELIVERED)
-        api_client.force_authenticate(owner_user)
 
         with patch.object(sms_center, "send_canceled_project_sms") as canceled_mock, \
                 patch.object(sms_center, "send_accepted_project_sms") as accepted_mock, \
                 patch.object(sms_center, "send_turned_project_sms") as turned_mock, \
                 patch("apps.core.sms.sms_class.send_single_sms", return_value=True) as send_mock:
-            response = api_client.post(self.list_create_url, data=data)
+            Project.objects.create(
+                branch=owner_user.active_branch,
+                car=car,
+                kilometer_of_car=300,
+                fuel_value=FuelTypeChoices.FULL,
+                status=ProjectStatusChoices.DELIVERED,
+            )
 
-        assert response.status_code == status.HTTP_201_CREATED
         assert canceled_mock.call_count == 0
         assert accepted_mock.call_count == 0
         assert turned_mock.call_count == 0

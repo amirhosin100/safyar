@@ -27,6 +27,9 @@ class TestSendBulkSMSAPIView:
         costumer.branch = owner_user.active_branch
         costumer.save()
 
+        owner_user.smoothing.wallet.stock = 999999
+        owner_user.smoothing.wallet.save()
+
         with patch("apps.core.sms.sms_class.send_bulk_sms") as mock:
             response = api_client.post(self.url, data={"message": "test_message"})
             assert response.status_code == status.HTTP_200_OK
@@ -64,6 +67,8 @@ class TestSendBulkSMSAPIView:
     def test_with_costumer_creates_success_log(self, api_client, owner_user):
         api_client.force_authenticate(owner_user)
         self._create_costumer_for_branch(owner_user.active_branch)
+        owner_user.smoothing.wallet.stock = 999999
+        owner_user.smoothing.wallet.save()
         log_count = SmsLog.objects.count()
 
         with patch("apps.core.sms.sms_class.send_bulk_sms") as mock:
@@ -78,6 +83,9 @@ class TestSendBulkSMSAPIView:
         api_client.force_authenticate(owner_user)
         phone_numbers = list(range(110))
         log_count = SmsLog.objects.count()
+
+        owner_user.smoothing.wallet.stock = 9999999
+        owner_user.smoothing.wallet.save()
 
         with patch("apps.smoothing.views.Costumer.objects.filter") as filter_mock:
             filter_mock.return_value.values_list.return_value = phone_numbers
@@ -94,6 +102,8 @@ class TestSendBulkSMSAPIView:
     def test_failed_send_creates_failed_log_and_returns_400(self, api_client, owner_user):
         api_client.force_authenticate(owner_user)
         self._create_costumer_for_branch(owner_user.active_branch)
+        owner_user.smoothing.wallet.stock = 999999
+        owner_user.smoothing.wallet.save()
         log_count = SmsLog.objects.count()
 
         with patch("apps.core.sms.sms_class.send_bulk_sms", return_value=False):
@@ -110,6 +120,9 @@ class TestSendBulkSMSAPIView:
         api_client.force_authenticate(owner_user)
         phone_numbers = list(range(110))
         log_count = SmsLog.objects.count()
+
+        owner_user.smoothing.wallet.stock = 9999999
+        owner_user.smoothing.wallet.save()
 
         with patch("apps.smoothing.views.Costumer.objects.filter") as filter_mock:
             filter_mock.return_value.values_list.return_value = phone_numbers
