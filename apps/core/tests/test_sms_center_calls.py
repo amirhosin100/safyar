@@ -7,6 +7,15 @@ from rest_framework import status
 
 from apps.account.models import User
 from apps.core.sms import sms_center
+from apps.core.tests.base_test import BaseTest
+from apps.costumer.tests.fixtures.data import car_initial_data
+from apps.project.models import Project
+from apps.project.tests.fixtures.data import project_initial_data, project_create_data
+from apps.smoothing.models import Smoothing
+from django.utils import timezone
+from apps.project.choices import ProjectStatusChoices, FuelTypeChoices
+from django.conf import settings
+
 from apps.core.sms.messages import (
     CANCELED_PROJECT,
     ACCEPTED_PROJECT,
@@ -15,15 +24,11 @@ from apps.core.sms.messages import (
     REGISTER_USER_FOR_SUPER_USER,
     SMOOTHING_ACTIVATED,
     SMOOTHING_DEACTIVATED,
+    WALLET_STOCK_WARN,
+    WALLET_STOCK_EMPTY,
 )
-from apps.core.tests.base_test import BaseTest
-from apps.costumer.tests.fixtures.data import car_initial_data
-from apps.project.choices import ProjectStatusChoices
-from apps.project.models import Project
-from apps.project.tests.fixtures.data import project_initial_data, project_create_data
-from apps.smoothing.models import Smoothing
-from django.utils import timezone
-from apps.project.choices import ProjectStatusChoices, FuelTypeChoices
+from apps.core.wallet.values import SEND_SINGLE_SMS
+from apps.costumer.tests.fixtures.data import costumer_initial_data
 
 pytestmark = pytest.mark.django_db
 
@@ -269,3 +274,130 @@ class TestSmoothingActivationSmsCenterCalls:
         assert deactivated_mock.call_count == 0
         assert activated_mock.call_count == 0
         assert send_mock.call_count == 0
+
+
+class TestWalletSmsCenterCalls:
+
+    @staticmethod
+    def _create_costumer_for_branch(branch):
+        costumer = costumer_initial_data.create_object()
+        costumer.branch = branch
+        costumer.save()
+        return costumer
+
+    @staticmethod
+    def _single_sms_url(costumer_id):
+        return reverse("smoothing:send-single-sms", args=[costumer_id])
+
+    @staticmethod
+    def _charge_wallet_via_api(api_client, super_user, smoothing_id, amount):
+        api_client.force_authenticate(super_user)
+        url = reverse("wallet:charge-wallet", args=[smoothing_id])
+        response = api_client.post(url, {"amount": amount})
+        assert response.status_code == status.HTTP_200_OK
+
+    # ---------------- warning ----------------
+
+    def test_wallet_warning_sms_sent_when_stock_crosses_below_warning_threshold(
+            self, api_client, owner_user, super_user
+    ):
+        costumer = self._create_costumer_for_branch(owner_user.active_branch)
+        wallet = owner_user.smoothing.wallet
+
+        target_stock_after_decrease = settings.WALLET_WARNING_STOCK - 1  # 99999
+        self._charge_wallet_via_api(
+            api_client, super_user, owner_user.smoothing.pk,
+            amount=target_stock_after_decrease + SEND_SINGLE_SMS,
+        )
+
+        api_client.force_authenticate(owner_user)
+
+        with patch.object(
+                sms_center, "send_wallet_stock_waring_sms", wraps=sms_center.send_wallet_stock_waring_sms
+        ) as center_mock, \
+                patch("apps.core.sms.sms_class.send_single_sms", return_value=True) as send_mock:
+            response = api_client.post(self._single_sms_url(costumer.id), data={"message": "hi"})
+
+        assert response.status_code == status.HTTP_200_OK
+
+        wallet.refresh_from_db()
+        assert wallet.stock == target_stock_after_decrease
+        assert wallet.is_sent_warning_sms is True
+
+        assert center_mock.call_count == 1
+        assert center_mock.call_args[0][0] == wallet
+
+        assert send_mock.call_count == 2
+        warning_call = next(
+            call for call in send_mock.call_args_list if call.args[0] == owner_user.phone_number
+        )
+        assert warning_call.args[1] == WALLET_STOCK_WARN % wallet.stock
+
+    def test_wallet_warning_sms_not_sent_again_once_already_flagged(self, api_client, owner_user):
+        costumer = self._create_costumer_for_branch(owner_user.active_branch)
+        wallet = owner_user.smoothing.wallet
+        wallet.stock = settings.WALLET_WARNING_STOCK - 1
+        wallet.is_sent_warning_sms = True
+        wallet.save()
+
+        api_client.force_authenticate(owner_user)
+
+        with patch.object(sms_center, "send_wallet_stock_waring_sms") as center_mock, \
+                patch("apps.core.sms.sms_class.send_single_sms", return_value=True):
+            response = api_client.post(self._single_sms_url(costumer.id), data={"message": "hi"})
+
+        assert response.status_code == status.HTTP_200_OK
+        assert center_mock.call_count == 0
+
+    # ---------------- empty ----------------
+
+    def test_wallet_empty_sms_sent_when_stock_crosses_below_empty_threshold(
+            self, api_client, owner_user, super_user
+    ):
+        costumer = self._create_costumer_for_branch(owner_user.active_branch)
+        wallet = owner_user.smoothing.wallet
+
+        target_stock_after_decrease = settings.WALLET_EMPTY_STOCK - 1  # 999
+        self._charge_wallet_via_api(
+            api_client, super_user, owner_user.smoothing.pk,
+            amount=target_stock_after_decrease + SEND_SINGLE_SMS,
+        )
+
+        api_client.force_authenticate(owner_user)
+
+        with patch.object(
+                sms_center, "send_wallet_stock_empty_sms", wraps=sms_center.send_wallet_stock_empty_sms
+        ) as center_mock, \
+                patch("apps.core.sms.sms_class.send_single_sms", return_value=True) as send_mock:
+            response = api_client.post(self._single_sms_url(costumer.id), data={"message": "hi"})
+
+        assert response.status_code == status.HTTP_200_OK
+
+        wallet.refresh_from_db()
+        assert wallet.stock == target_stock_after_decrease
+        assert wallet.is_sent_empty_sms is True
+
+        assert center_mock.call_count == 1
+        assert center_mock.call_args[0][0] == wallet
+
+        assert send_mock.call_count == 2
+        empty_call = next(
+            call for call in send_mock.call_args_list if call.args[0] == owner_user.phone_number
+        )
+        assert empty_call.args[1] == WALLET_STOCK_EMPTY
+
+    def test_wallet_empty_sms_not_sent_again_once_already_flagged(self, api_client, owner_user):
+        costumer = self._create_costumer_for_branch(owner_user.active_branch)
+        wallet = owner_user.smoothing.wallet
+        wallet.stock = settings.WALLET_EMPTY_STOCK - 1
+        wallet.is_sent_empty_sms = True
+        wallet.save()
+
+        api_client.force_authenticate(owner_user)
+
+        with patch.object(sms_center, "send_wallet_stock_empty_sms") as center_mock, \
+                patch("apps.core.sms.sms_class.send_single_sms", return_value=True):
+            response = api_client.post(self._single_sms_url(costumer.id), data={"message": "hi"})
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert center_mock.call_count == 0

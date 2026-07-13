@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "apps.wallet",
     "apps.costumer",
     "apps.project",
+    "apps.report",
     # other packages
     "corsheaders",
     "rest_framework",

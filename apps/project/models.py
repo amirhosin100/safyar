@@ -142,7 +142,6 @@ class Project(BaseModel):
             self.turn_time = timezone.now()
 
         super().save(*args, **kwargs)
-        # TODO fill the paint_price and etc ...
 
 
 class ProjectImage(BaseModel):
