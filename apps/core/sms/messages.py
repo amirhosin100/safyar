@@ -7,5 +7,5 @@ REGISTER_USER_FOR_SUPER_USER = "کاربری با نام %s در سامانه ث
 REGISTER_SMS = "ثبت نام شما با موفقیت انجام شد"
 ACCEPTED_SMOOTHING = "صافکاری شما توسط ادمین سایت تایید شد "
 REJECTED_SMOOTHING = "صافکاری شما توسط ادمین رد شد"
-SMOOTHING_DEACTIVATED = "صافکاری شما بنا به دلایلی غیر فعال شده است"
-SMOOTHING_ACTIVATED = "صافکاری شما فعال شد"
+SMOOTHING_DEACTIVATED = "صافکاری شما بنا به دلایلی غیر فعال شده است برای جزییات بیشتر با پشتیبانی سایت تماس بگیرید"
+SMOOTHING_ACTIVATED = "صافکاری شما فعال شد می توانید فعالیت خودتان را شروع کنید"
