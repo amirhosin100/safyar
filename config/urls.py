@@ -54,6 +54,7 @@ urlpatterns = [
     path(f"api/{version}/", include("apps.account.urls")),
     path(f"api/{version}/", include("apps.project.urls")),
     path(f"api/{version}/", include("apps.costumer.urls",namespace="costumer")),
+    path(f"api/{version}/", include("apps.report.urls")),
 ]
 
 if settings.DEBUG:
