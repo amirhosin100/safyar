@@ -38,7 +38,6 @@ class CarViewSet(FilterByBranchViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def get_queryset(self):
-        #TODO test it
         if costumer_id := self.request.query_params.get('costumer_id'):
             return super().get_queryset().filter(costumer_id=costumer_id)
         return super().get_queryset()

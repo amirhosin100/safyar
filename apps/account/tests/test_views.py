@@ -1,4 +1,3 @@
-# tests/test_login_view.py
 import pytest
 from django.urls import reverse
 from rest_framework import status
@@ -9,6 +8,7 @@ from unittest.mock import patch
 
 from apps.smoothing.models import Smoothing, Branch
 from apps.smoothing.tests.fixtures.data import branch_initial_data
+from django.core.cache import cache
 
 pytestmark = pytest.mark.django_db
 
@@ -203,6 +203,10 @@ class TestResetPasswordView:
     send_sms_url = reverse("account:send-sms")
     login_url = reverse("account:login")
 
+    @staticmethod
+    def _cache_key(national_code):
+        return f"verify_code:{national_code}"
+
     def test_correct(self, api_client, normal_user):
         data = {
             "national_code": normal_user.national_code,
@@ -237,7 +241,183 @@ class TestResetPasswordView:
         )
         assert response.status_code == status.HTTP_200_OK
 
-    # TODO write more tests
+    def test_send_sms_user_not_found(self, api_client):
+        api_client.force_authenticate(user=None)
+        response = api_client.post(self.send_sms_url, {"national_code": "1112223334"})
+
+        # NOTE: view returns default 200 here instead of 404 - documenting current behavior
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["detail"] == "user not found"
+
+    def test_send_sms_missing_national_code_returns_400(self, api_client):
+        api_client.force_authenticate(user=None)
+        response = api_client.post(self.send_sms_url, {})
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_send_sms_invalid_national_code_format_returns_400(self, api_client):
+        api_client.force_authenticate(user=None)
+        response = api_client.post(self.send_sms_url, {"national_code": "123"})
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_send_sms_sets_code_in_cache(self, api_client, normal_user):
+        api_client.force_authenticate(user=None)
+        with patch("apps.account.views.random.choices") as mocker_choices:
+            mocker_choices.return_value = "654321"
+            response = api_client.post(self.send_sms_url, {"national_code": normal_user.national_code})
+
+        assert response.status_code == status.HTTP_200_OK
+        assert cache.get(self._cache_key(normal_user.national_code)) == "654321"
+
+    # ---------------- VerifyCodeView ----------------
+
+    def test_verify_code_correct(self, api_client, normal_user):
+        api_client.force_authenticate(user=None)
+        cache.set(self._cache_key(normal_user.national_code), "111111", timeout=60)
+
+        response = api_client.post(
+            self.verify_code_url,
+            {"national_code": normal_user.national_code, "code": "111111"},
+        )
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_verify_code_wrong_code_returns_400(self, api_client, normal_user):
+        api_client.force_authenticate(user=None)
+        cache.set(self._cache_key(normal_user.national_code), "111111", timeout=60)
+
+        response = api_client.post(
+            self.verify_code_url,
+            {"national_code": normal_user.national_code, "code": "999999"},
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_verify_code_not_requested_returns_400(self, api_client, normal_user):
+        """No code was ever sent/cached for this national_code."""
+        api_client.force_authenticate(user=None)
+        cache.delete(self._cache_key(normal_user.national_code))
+
+        response = api_client.post(
+            self.verify_code_url,
+            {"national_code": normal_user.national_code, "code": "111111"},
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_verify_code_does_not_consume_the_code(self, api_client, normal_user):
+        """VerifyCodeView only validates - it doesn't delete the cached code."""
+        api_client.force_authenticate(user=None)
+        cache.set(self._cache_key(normal_user.national_code), "111111", timeout=60)
+
+        for _ in range(2):
+            response = api_client.post(
+                self.verify_code_url,
+                {"national_code": normal_user.national_code, "code": "111111"},
+            )
+            assert response.status_code == status.HTTP_200_OK
+
+    def test_verify_code_missing_fields_returns_400(self, api_client):
+        api_client.force_authenticate(user=None)
+        response = api_client.post(self.verify_code_url, {})
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    # ---------------- ResetPasswordView ----------------
+
+    def test_reset_password_wrong_code_returns_400(self, api_client, normal_user):
+        api_client.force_authenticate(user=None)
+        cache.set(self._cache_key(normal_user.national_code), "111111", timeout=60)
+
+        response = api_client.post(self.reset_password_url, {
+            "national_code": normal_user.national_code,
+            "code": "000000",
+            "password1": "NewPass@123",
+            "password2": "NewPass@123",
+        })
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_reset_password_mismatched_passwords_returns_400(self, api_client, normal_user):
+        api_client.force_authenticate(user=None)
+        cache.set(self._cache_key(normal_user.national_code), "111111", timeout=60)
+
+        response = api_client.post(self.reset_password_url, {
+            "national_code": normal_user.national_code,
+            "code": "111111",
+            "password1": "NewPass@123",
+            "password2": "Different@123",
+        })
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_reset_password_weak_password_returns_400(self, api_client, normal_user):
+        api_client.force_authenticate(user=None)
+        cache.set(self._cache_key(normal_user.national_code), "111111", timeout=60)
+
+        response = api_client.post(self.reset_password_url, {
+            "national_code": normal_user.national_code,
+            "code": "111111",
+            "password1": "123",
+            "password2": "123",
+        })
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_reset_password_missing_fields_returns_400(self, api_client):
+        api_client.force_authenticate(user=None)
+        response = api_client.post(self.reset_password_url, {})
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_reset_password_changes_password(self, api_client, normal_user):
+        api_client.force_authenticate(user=None)
+        cache.set(self._cache_key(normal_user.national_code), "111111", timeout=60)
+
+        response = api_client.post(self.reset_password_url, {
+            "national_code": normal_user.national_code,
+            "code": "111111",
+            "password1": "NewPass@123",
+            "password2": "NewPass@123",
+        })
+
+        assert response.status_code == status.HTTP_200_OK
+        normal_user.refresh_from_db()
+        assert normal_user.check_password("NewPass@123")
+
+    def test_reset_password_consumes_the_code(self, api_client, normal_user):
+        """Once used successfully, the same code can't be reused for another reset."""
+        api_client.force_authenticate(user=None)
+        cache.set(self._cache_key(normal_user.national_code), "111111", timeout=60)
+
+        response = api_client.post(self.reset_password_url, {
+            "national_code": normal_user.national_code,
+            "code": "111111",
+            "password1": "NewPass@123",
+            "password2": "NewPass@123",
+        })
+        assert response.status_code == status.HTTP_200_OK
+
+        response = api_client.post(self.reset_password_url, {
+            "national_code": normal_user.national_code,
+            "code": "111111",
+            "password1": "AnotherPass@123",
+            "password2": "AnotherPass@123",
+        })
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_reset_password_unknown_user_still_returns_200(self, api_client):
+        """
+        If no user exists for the national_code (edge case, code cached
+        directly), the view still returns 200 without crashing - it just
+        doesn't change anyone's password.
+        """
+        api_client.force_authenticate(user=None)
+        national_code = "1111111119"
+        cache.set(self._cache_key(national_code), "111111", timeout=60)
+
+        response = api_client.post(self.reset_password_url, {
+            "national_code": national_code,
+            "code": "111111",
+            "password1": "NewPass@123",
+            "password2": "NewPass@123",
+        })
+        assert response.status_code == status.HTTP_200_OK
 
 
 class TestCreateUser:

@@ -2,6 +2,7 @@ import pytest
 from rest_framework import status
 
 from apps.core.tests.base_test import BaseTest
+from apps.costumer.choices import GenderChoices
 from apps.costumer.models import Costumer, Car
 from apps.costumer.tests.fixtures.data import (
     costumer_initial_data,
@@ -45,7 +46,7 @@ class TestCostumerView:
         admin_user.allowed_branches.set([])
         admin_user.save()
 
-        #even superuser get nothing
+        # even superuser get nothing
         for user, count in ((owner_user, 1), (super_user, 0), (admin_user, 0)):
             api_client.force_authenticate(user=user)
 
@@ -75,7 +76,6 @@ class TestCostumerView:
 
             assert response.status_code == status.HTTP_201_CREATED
             assert response.data["branch"] == user.active_branch.id
-
 
     def test_with_unauthorized_branch_and_superuser(self, api_client, super_user, owner_user):
         costumer_initial_data.request_data["branch"] = owner_user.active_branch.id
@@ -325,6 +325,17 @@ class TestCarView:
         """Return a fresh copy of car creation payload to avoid shared mutable state."""
         return car_create_data.request_data.copy()
 
+    @staticmethod
+    def _create_costumer(branch, phone_number, name="ali"):
+        """Distinct phone_number per call, so multiple costumers can share a branch."""
+        return Costumer.objects.create(
+            branch=branch,
+            name=name,
+            gender=GenderChoices.MALE,
+            phone_number=phone_number,
+            address="test address",
+        )
+
     # ---- list ----------------------------------------------------------
 
     def test_correct_list(self, api_client, owner_user):
@@ -478,7 +489,6 @@ class TestCarView:
     def test_admin_cannot_retrieve_car_outside_allowed_branches(
             self, api_client, owner_user, admin_user
     ):
-
         admin_user.active_branch = owner_user.active_branch
         admin_user.allowed_branches.set([])
         admin_user.save()
@@ -626,3 +636,61 @@ class TestCarView:
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert not Car.objects.filter(id=car.id).exists()
 
+    # ---- costumer_id filter ----
+
+    def test_list_filters_by_costumer_id(self, api_client, owner_user):
+        costumer_1 = self._create_costumer(owner_user.active_branch, "09136600001")
+        costumer_2 = self._create_costumer(owner_user.active_branch, "09136600002")
+
+        car_1 = Car.objects.create(costumer=costumer_1, plate="11-الف-555-45", color="red", name="car1")
+        Car.objects.create(costumer=costumer_2, plate="12-ب-555-45", color="blue", name="car2")
+
+        api_client.force_authenticate(user=owner_user)
+        response = api_client.get(self.list_create_url, {"costumer_id": costumer_1.id})
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 1
+        assert response.data[0]["id"] == car_1.id
+
+    def test_list_without_costumer_id_returns_all_branch_cars(self, api_client, owner_user):
+        costumer_1 = self._create_costumer(owner_user.active_branch, "09136600003")
+        costumer_2 = self._create_costumer(owner_user.active_branch, "09136600004")
+
+        Car.objects.create(costumer=costumer_1, plate="11-الف-555-45", color="red", name="car1")
+        Car.objects.create(costumer=costumer_2, plate="12-ب-555-45", color="blue", name="car2")
+
+        api_client.force_authenticate(user=owner_user)
+        response = api_client.get(self.list_create_url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 2
+
+    def test_list_costumer_id_from_other_branch_returns_empty(self, api_client, owner_user, super_user):
+        """
+        Branch filtering happens first (FilterByBranchViewSet), so a costumer_id
+        belonging to a different branch/smoothing just yields an empty result -
+        it's not a permission error.
+        """
+        other_costumer = self._create_costumer(super_user.active_branch, "09136600005")
+        Car.objects.create(costumer=other_costumer, plate="13-الف-555-45", color="black", name="car3")
+
+        api_client.force_authenticate(user=owner_user)
+        response = api_client.get(self.list_create_url, {"costumer_id": other_costumer.id})
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 0
+
+    def test_list_nonexistent_costumer_id_returns_empty(self, api_client, owner_user):
+        self._create_car_for_branch(owner_user.active_branch)
+
+        api_client.force_authenticate(user=owner_user)
+        response = api_client.get(self.list_create_url, {"costumer_id": 999999})
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 0
+
+    def test_list_costumer_id_unauthenticated(self, client, owner_user):
+        costumer = self._create_costumer(owner_user.active_branch, "09136600006")
+
+        response = client.get(self.list_create_url, {"costumer_id": costumer.id})
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
