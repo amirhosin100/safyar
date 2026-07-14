@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    "django.contrib.sites",
     # internal apps
     "apps.core",
     "apps.account",
@@ -45,8 +46,9 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "django_filters",
-    'drf_spectacular',
-    'drf_spectacular_sidecar',
+    "drf_spectacular",
+    "drf_spectacular_sidecar",
+    "azbankgateways",
 ]
 
 MIDDLEWARE = [
@@ -177,6 +179,8 @@ EXCLUDE_APPS = {
     "axes",
     "account",
     "silk",
+    "sites",
+    "azbankgateways"
 }
 
 # REST_FRAMEWORK
@@ -207,3 +211,20 @@ SPECTACULAR_SETTINGS = {
     'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
     'REDOC_DIST': 'SIDECAR',
 }
+
+AZ_IRANIAN_BANK_GATEWAYS = {
+    "GATEWAYS": {
+        "ASANPARDAKHT": {
+            "MERCHANT_CONFIGURATION_ID": os.environ.get("MERCHANT_CONFIGURATION_ID"),
+            "USERNAME": os.environ.get("GATEWAY_USERNAME"),
+            "PASSWORD": os.environ.get("GATEWAY_PASSWORD"),
+        }
+    },
+    "IS_SAFE_GET_GATEWAY_PAYMENT": True,
+    "DEFAULT": "ASANPARDAKHT",
+    "BANK_PRIORITIES": [
+        "ASANPARDAKHT"
+    ],
+}
+
+SITE_ID = 1

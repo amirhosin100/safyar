@@ -8,6 +8,7 @@ from apps.core.auto_generator.auto_generator import get_or_create_viewset
 from apps.core.utils.api_route import get_crud_api_prefix
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from rest_framework_simplejwt.views import TokenRefreshView
+from azbankgateways.urls import az_bank_gateways_urls
 
 router = DefaultRouter()
 custom_import_export_router = DefaultRouter()
@@ -44,6 +45,7 @@ schema_urlpatterns = [
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("bankgateways/", az_bank_gateways_urls()),
     path(f"api/{version}/schema/", include(schema_urlpatterns)),
     path(f'api/{version}/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 

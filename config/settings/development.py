@@ -10,3 +10,5 @@ MIDDLEWARE += [
 INSTALLED_APPS += [
     "silk",
 ]
+
+DEFAULT_PROTOCOL = "http"
