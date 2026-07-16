@@ -37,7 +37,7 @@ services:
     env_file:
       - ../.env
     ports:
-      - "8000:8000"
+      - "${DJANGO_EXTERNAL_PORT}:8000"
     volumes:
       - "../:/src"
     restart: always
