@@ -40,6 +40,10 @@ class Wallet(BaseModel):
         self.save()
         return True
 
+    def add(self, amount):
+        self.stock += amount
+        self.save()
+
 
 class WalletTransaction(BaseModel):
     wallet = models.ForeignKey(
@@ -66,6 +70,11 @@ class WalletTransaction(BaseModel):
         verbose_name=_("Description"),
         blank=True,
         null=True,
+    )
+    tracking_code = models.CharField(
+        max_length=255,
+        verbose_name=_("Tracking code"),
+        unique=True,
     )
 
     class Meta:

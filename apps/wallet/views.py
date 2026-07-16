@@ -2,9 +2,12 @@ import logging
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.generics import ListAPIView, RetrieveAPIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.shortcuts import redirect
+from django.conf import settings
+from django.utils.translation import gettext_lazy as _
 
 from apps.core.permissions import HasBranch, IsSuperUser
 from apps.core.base_classes.base_viewset import BaseAPIView
@@ -13,7 +16,10 @@ from apps.wallet.choices import TransactionStatusChoices, TransactionTypeChoices
 from apps.wallet.models import WalletTransaction, Wallet
 from apps.wallet.serializers import (
     WalletTransactionSuperUserSerializer,
-    WalletTransactionSerializer, AddStockWalletSerializer, ChargeWalletSerializer, WalletSerializer
+    WalletTransactionSerializer,
+    AddStockWalletSerializer,
+    ChargeWalletSerializer,
+    WalletSerializer
 )
 
 from azbankgateways import (
@@ -21,7 +27,7 @@ from azbankgateways import (
     models as bank_models,
     default_settings as settings,
 )
-from azbankgateways.exceptions import AZBankGatewaysException
+from azbankgateways.exceptions import AZBankGatewaysException, BankGatewayStateInvalid
 
 
 class WalletTransactionSuperUserListView(ListAPIView, BaseAPIView):
@@ -64,7 +70,7 @@ class AddStockWalletView(APIView):
         except Wallet.DoesNotExist:
             return Response(
                 data={
-                    "error": "smoothing not found"
+                    "detail": _("smoothing not found")
                 },
                 status=status.HTTP_404_NOT_FOUND
             )
@@ -98,7 +104,7 @@ class WalletInfoView(APIView):
 
 
 class ChargeWalletView(APIView):
-    # TODO edit this
+    # TODO write test for it
     permission_classes = (HasBranch,)
     serializer_class = ChargeWalletSerializer
 
@@ -110,24 +116,33 @@ class ChargeWalletView(APIView):
         smoothing = request.user.active_branch.smoothing
 
         if smoothing is None:
-            return Response({"detail": "you don't have a smoothing"}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": _("you don't have a smoothing")}, status=status.HTTP_403_FORBIDDEN)
+
         if not hasattr(smoothing, "owner_user"):
-            return Response({"detail": "smoothing is unknown"}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": _("smoothing is unknown")}, status=status.HTTP_403_FORBIDDEN)
 
         phone_number = smoothing.owner_user.phone_number
-
         factory = bankfactories.BankFactory()
 
         try:
             bank = factory.auto_create()
-
             bank.set_request(request)
             bank.set_amount(amount)
-
             bank.set_client_callback_url(reverse("wallet:callback-gateway"))
             bank.set_mobile_number(phone_number)
 
             context = bank.get_gateway()
+
+            WalletTransaction.objects.create(
+                amount=amount,
+                status=TransactionStatusChoices.PENDING,
+                transaction_type=TransactionTypeChoices.SETTLE,
+                description=_(
+                    "user with name {full_name} charge the wallet"
+                ).format(full_name=request.user.full_name),
+                tracking_code=bank.get_tracking_code()
+            )
+
             return Response(context)
 
         except AZBankGatewaysException as e:
@@ -139,21 +154,31 @@ class ChargeWalletView(APIView):
 
 
 class CallBackWalletView(APIView):
-    permission_classes = (HasBranch,)
+    permission_classes = (AllowAny,)
 
     def get(self, request):
         tracking_code = request.GET.get(settings.TRACKING_CODE_QUERY_PARAM, None)
         if not tracking_code:
             return Response({"detail": "This link is invalid"}, status=status.HTTP_404_NOT_FOUND)
 
+        factory = bankfactories.BankFactory()
+        bank = factory.create()
+
         try:
+            bank.verify(tracking_code)
             bank_record = bank_models.Bank.objects.get(tracking_code=tracking_code)
-        except bank_models.Bank.DoesNotExist:
+        except BankGatewayStateInvalid:
             return Response({"detail": "This link is invalid"}, status=status.HTTP_404_NOT_FOUND)
 
         if bank_record.is_success:
-            return Response(
-                {"detail": "the operation has been successful"},
-            )
+            transaction = WalletTransaction.objects.get(tracking_code=tracking_code)
+            transaction.status = TransactionStatusChoices.SUCCESS
+            transaction.save()
+
+            wallet = transaction.wallet
+            amount = bank_record.amount
+            wallet.add(amount)
+
+            return redirect(settings.WALLET_CALLBACK_URL + f"?tracking_code={tracking_code}")
 
         return Response({"detail": "the operation has been failed"}, status=status.HTTP_400_BAD_REQUEST)

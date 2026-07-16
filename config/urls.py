@@ -34,7 +34,6 @@ for app_config in apps.get_app_configs():
         except Exception as e:
             print(f"Skipping {app_config.label}.{model.__name__}: {e}")
 
-
 version = "v1"
 
 schema_urlpatterns = [
@@ -44,7 +43,6 @@ schema_urlpatterns = [
 ]
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
     path("bankgateways/", az_bank_gateways_urls()),
     path(f"api/{version}/schema/", include(schema_urlpatterns)),
     path(f'api/{version}/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
@@ -55,10 +53,11 @@ urlpatterns = [
     path(f"api/{version}/", include("apps.smoothing.urls")),
     path(f"api/{version}/", include("apps.account.urls")),
     path(f"api/{version}/", include("apps.project.urls")),
-    path(f"api/{version}/", include("apps.costumer.urls",namespace="costumer")),
+    path(f"api/{version}/", include("apps.costumer.urls", namespace="costumer")),
     path(f"api/{version}/", include("apps.report.urls")),
 ]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += [path('silk/', include('silk.urls', namespace='silk'))]
+    urlpatterns += [path("admin/", admin.site.urls)]
