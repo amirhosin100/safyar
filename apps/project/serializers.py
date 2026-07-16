@@ -93,3 +93,14 @@ class ScheduleRequestSerializer(serializers.Serializer):
     year = serializers.CharField(validators=[RegexValidator(regex=r"^\d{4}$")])
     month = serializers.CharField(validators=[RegexValidator(regex=r"^(0?[1-9]|1[0-2])$")])
     branch_id = serializers.BigIntegerField()
+
+
+class ProjectScheduleTimeSerializer(serializers.Serializer):
+    time = serializers.CharField(
+        validators=[RegexValidator(r"^[0-2][0-9]:[0-5][0-9]$")]
+    )
+
+
+class ProjectScheduleSerializer(serializers.Serializer):
+    times = ProjectScheduleTimeSerializer(many=True,read_only=True)
+    date = serializers.DateField(read_only=True)

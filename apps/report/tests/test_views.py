@@ -62,10 +62,12 @@ class TestSmoothingWalletTransactionReportView:
 
     @staticmethod
     def _create_transaction(smoothing, transaction_type):
+        tracking_code = str(random.randint(1, 1000))
         return smoothing.wallet.transactions.create(
             amount=1000,
             status=TransactionStatusChoices.SUCCESS,
             transaction_type=transaction_type,
+            tracking_code=tracking_code,
         )
 
     def test_correct_counts(self, api_client, owner_user):

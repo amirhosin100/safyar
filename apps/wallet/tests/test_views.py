@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 
 from django.urls import reverse
@@ -34,6 +36,7 @@ class TestWalletTransactionListView:
 
     def test_correct(self, api_client, owner_user, super_user):
         owner_user.smoothing.wallet.transactions.create(**wallet_transaction_initial_data.request_data)
+        wallet_transaction_initial_data.request_data["tracking_code"] = uuid.uuid4()
         super_user.smoothing.wallet.transactions.create(**wallet_transaction_initial_data.request_data)
 
         assert owner_user.active_branch is not None
@@ -46,6 +49,7 @@ class TestWalletTransactionListView:
 
     def test_with_normal_user(self, normal_user, owner_user, api_client, super_user):
         owner_user.smoothing.wallet.transactions.create(**wallet_transaction_initial_data.request_data)
+        wallet_transaction_initial_data.request_data["tracking_code"] = uuid.uuid4()
         super_user.smoothing.wallet.transactions.create(**wallet_transaction_initial_data.request_data)
 
         api_client.force_authenticate(user=normal_user)
@@ -56,7 +60,8 @@ class TestWalletTransactionListView:
 
     def test_with_user_who_joined_branch(self, normal_user, owner_user, api_client, super_user):
         owner_user.smoothing.wallet.transactions.create(**wallet_transaction_initial_data.request_data)
-        transcation = super_user.smoothing.wallet.transactions.create(**wallet_transaction_initial_data.request_data)
+        wallet_transaction_initial_data.request_data["tracking_code"] = uuid.uuid4()
+        transaction = super_user.smoothing.wallet.transactions.create(**wallet_transaction_initial_data.request_data)
 
         normal_user.active_branch = super_user.active_branch
         normal_user.save()
@@ -65,7 +70,7 @@ class TestWalletTransactionListView:
         response = api_client.get(self.url + "?page=1")
         assert response.status_code == status.HTTP_200_OK
         assert response.data["count"] == 1
-        assert response.data["results"][0]["id"] == transcation.id
+        assert response.data["results"][0]["id"] == transaction.id
 
 
 class TestAddStockWalletView:

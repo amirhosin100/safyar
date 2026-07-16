@@ -1,4 +1,4 @@
-from datetime import time,datetime
+from datetime import time, datetime
 
 import pytest
 from django.urls import reverse
@@ -26,10 +26,12 @@ class TestScheduleView:
 
         project = project_initial_data.create_object()
         project.branch = branch
-        project.turn_time = datetime(month=4, year=2026, day=11, hour=7,minute=30)
+        project.turn_time = datetime(month=4, year=2026, day=11, hour=7, minute=30)
         project.turn_time = timezone.make_aware(project.turn_time)
         project.save()
 
-        response = api_client.get(self.url +f"?month=4&year=2026&branch_id={branch.id}")
+        response = api_client.get(self.url + f"?month=4&year=2026&branch_id={branch.id}")
+
+        times = map(lambda value: value["time"], response.data[10]["times"])
         assert response.status_code == status.HTTP_200_OK
-        assert "7:30" not in response.data["2026-04-11"]
+        assert "7:30" not in times

@@ -6,14 +6,16 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema
 
 from apps.core.base_classes.base_viewset import BaseProtectionViewSet
 from apps.core.permissions import HasBranch
+from apps.core.utils.time import get_time
 from apps.core.wallet import WalletCenter
 from apps.project.choices import ProjectStatusChoices
 from apps.project.models import Project, MainPart, ProjectImage, FixItem
 from apps.project.serializers import ProjectSerializer, FixItemSerializer, MainPartSerializer, ProjectImageSerializer, \
-    ScheduleRequestSerializer
+    ScheduleRequestSerializer, ProjectScheduleSerializer
 from django.utils.translation import gettext_lazy as _
 
 from apps.smoothing.models import Branch
@@ -114,7 +116,9 @@ class MainPartListView(generics.ListAPIView):
 
 class ProjectScheduleListView(APIView):
     permission_classes = (HasBranch,)
+    serializer_class = ProjectScheduleSerializer
 
+    @extend_schema(responses=ProjectScheduleSerializer(many=True))
     def get(self, request):
         serializer = ScheduleRequestSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
@@ -137,25 +141,8 @@ class ProjectScheduleListView(APIView):
                 {"detail": _("This branch has not open or closed time.,Please Set these Fields")},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
-        start_date = datetime.datetime(month=month, year=year, day=1)
-        times = {}
         week_days = branch.get_closed_days()
-
-        while start_date.month == month:
-            time = branch.open_time.replace(second=0, microsecond=0)
-            str_time = start_date.strftime("%Y-%m-%d")
-            if start_date.weekday() in week_days:
-                start_date += datetime.timedelta(days=1)
-                continue
-            times[str_time] = set()
-
-            while time < branch.closed_time:
-                times[str_time].add(time.strftime("%H:%M"))
-                minutes = time.minute + time.hour * 60 + 30
-                time = datetime.time(minute=minutes % 60, hour=minutes // 60)
-
-            start_date += datetime.timedelta(days=1)
+        times = get_time(year, month, branch.open_time, branch.closed_time, week_days)
 
         dates = Project.objects.filter(
             branch=branch,
@@ -173,4 +160,14 @@ class ProjectScheduleListView(APIView):
             if day in times and hour in times[day]:
                 times[day].remove(hour)
 
-        return Response(data=times, status=status.HTTP_200_OK)
+        # change data format
+        data = []
+        index = 0
+        for date, times in times.items():
+            data.append({"date": date, "times": []})
+            for time in times:
+                data[index]["times"].append({"time": time})
+
+            index += 1
+
+        return Response(data=data, status=status.HTTP_200_OK)
