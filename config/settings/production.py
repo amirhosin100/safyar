@@ -11,10 +11,13 @@ REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] = ["rest_framework.renderers.JSONRend
 
 DEFAULT_PROTOCOL = "https"
 
-del INSTALLED_APPS[INSTALLED_APPS.index("django.contrib.admin")]
-del INSTALLED_APPS[INSTALLED_APPS.index("django.contrib.sessions")]
-del INSTALLED_APPS[INSTALLED_APPS.index("django.contrib.messages")]
+for app in ("django.contrib.admin", "django.contrib.sessions", "django.contrib.messages"):
+    del INSTALLED_APPS[INSTALLED_APPS.index(app)]
 
-del MIDDLEWARE[MIDDLEWARE.index('django.contrib.sessions.middleware.SessionMiddleware')]
-del MIDDLEWARE[MIDDLEWARE.index('django.contrib.messages.middleware.MessageMiddleware')]
-del MIDDLEWARE[MIDDLEWARE.index('django.contrib.auth.middleware.AuthenticationMiddleware')]
+for middleware in (
+        'django.contrib.sessions.middleware.SessionMiddleware',
+        'django.contrib.messages.middleware.MessageMiddleware',
+        'django.contrib.auth.middleware.AuthenticationMiddleware',
+        'django.middleware.csrf.CsrfViewMiddleware',
+):
+    del MIDDLEWARE[MIDDLEWARE.index(middleware)]
