@@ -4,7 +4,7 @@ from apps.core.utils.main_part import load_main_parts
 
 
 class Command(BaseCommand):
-    help = "Load MainPart and FixArea records from static/data/main-part.json"
+    help = "Load MainPart and FixArea records from data/main-part.json"
 
     def handle(self, *args, **options):
         summary = load_main_parts()

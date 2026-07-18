@@ -5,7 +5,7 @@ from django.conf import settings
 
 from apps.project.models import MainPart, FixArea
 
-MAIN_PART_DATA_FILE = settings.BASE_DIR / "static" / "data" / "main-part.json"
+MAIN_PART_DATA_FILE = settings.BASE_DIR  / "data" / "main-part.json"
 
 
 def load_main_parts(file_path: Path = MAIN_PART_DATA_FILE) -> dict:
