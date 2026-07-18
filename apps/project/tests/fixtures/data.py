@@ -11,14 +11,14 @@ project_initial_data = InitialData(
         "fuel_value": FuelTypeChoices.FULL,
         "turn_time": "2001-10-20T14:00:00+03:30",
         "status": ProjectStatusChoices.TURNED,
-        "fee": 100,
+        "amount": 100,
     },
     {
         "kilometer_of_car": 200,
         "fuel_value": FuelTypeChoices.FULL.value,
         "turn_time": "2001-10-20T14:00:00+03:30",
         "status": ProjectStatusChoices.TURNED.value,
-        "fee": 100,
+        "amount": 100,
     },
     relation_fields={
         "car": car_initial_data,
@@ -45,5 +45,5 @@ project_create_data = APIRequestData(
         "car": car_initial_data,
         "branch": branch_initial_data
     },
-    extra_fields=["car", "branch", "smoothing", "created_at", "items", "id", "fee"],
+    extra_fields=["car", "branch", "smoothing", "created_at", "items", "id", "amount"],
 )

@@ -41,22 +41,23 @@ def recalculate_project_fix_items(project_id):
         )
     )
     amount = 0
+    project = Project.objects.get(pk=project_id)
 
-    update_fields = {}
-    for days_field, price_field in FIX_TYPE_FIELDS.values():
-        update_fields[days_field] = None
-        update_fields[price_field] = None
+    for days, price in FIX_TYPE_FIELDS.values():
+        setattr(project, days, None)
+        setattr(project, price, None)
 
     for row in aggregates:
         fields = FIX_TYPE_FIELDS.get(row["fix_type"])
         if fields is None:
             continue
         days_field, price_field = fields
-        update_fields[days_field] = row["total_days"]
-        update_fields[price_field] = row["total_price"]
+        setattr(project, days_field, row["total_days"])
+        setattr(project, price_field, row["total_price"])
         amount += row["total_price"]
 
-    Project.objects.filter(pk=project_id).update(**update_fields,amount=amount)
+    project.amount = amount
+    project.save()
 
     colleague_ids = list(
         FixItem.objects.filter(project_id=project_id, repairman__isnull=False)

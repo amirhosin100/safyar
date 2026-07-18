@@ -32,6 +32,6 @@ class TestScheduleView:
 
         response = api_client.get(self.url + f"?month=4&year=2026&branch_id={branch.id}")
 
-        times = map(lambda value: value["time"], response.data[10]["times"])
+        times = map(lambda value: value["time"], response.data["result"][10]["times"])
         assert response.status_code == status.HTTP_200_OK
         assert "7:30" not in times

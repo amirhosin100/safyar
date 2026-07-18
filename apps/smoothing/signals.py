@@ -37,8 +37,8 @@ def check_codes(sender, instance, **kwargs):
             instance.next_follow_up_code != instance._pre_next_follow_up_code
     ):
         biggest_code = Project.objects.filter(branch=instance).aggregate(Max("code"))["code__max"]
-        if biggest_code is not None and instance.next_follow_up_code < biggest_code:
-            raise ValidationError(f"next_follow_up_code must be grater then {biggest_code}")
+        if biggest_code is not None and instance.next_follow_up_code <= biggest_code:
+            raise ValidationError(f"next_follow_up_code must be grater then or equal {biggest_code}")
 
 
 

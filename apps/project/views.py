@@ -131,7 +131,6 @@ class ProjectScheduleListView(APIView):
     permission_classes = (HasBranch,)
     serializer_class = ProjectScheduleSerializer
 
-    @extend_schema(responses=ProjectScheduleSerializer(many=True))
     def get(self, request):
         serializer = ScheduleRequestSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
@@ -154,6 +153,7 @@ class ProjectScheduleListView(APIView):
                 {"detail": _("This branch has not open or closed time.,Please Set these Fields")},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
         week_days = branch.get_closed_days()
         times = get_time(year, month, branch.open_time, branch.closed_time, week_days)
 
@@ -174,12 +174,16 @@ class ProjectScheduleListView(APIView):
                 times[day].remove(hour)
 
         # change data format
-        data = []
+        data = {
+            "open_time":branch.open_time,
+            "close_time":branch.closed_time,
+            "result":[]
+        }
         index = 0
         for date, times in times.items():
-            data.append({"date": date, "times": []})
+            data["result"].append({"date": date, "times": []})
             for time in times:
-                data[index]["times"].append({"time": time})
+                data["result"][index]["times"].append({"time": time})
 
             index += 1
 

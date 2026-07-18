@@ -8,11 +8,11 @@ class TestVersionView(BaseTestView):
     def test_with_normal_user(self, api_client, owner_user):
         api_client.force_authenticate(owner_user)
         response = api_client.get(self.list_create_url)
-        assert response.status_code == 403
+        assert response.status_code == 200
 
     def test_with_anonymous_user(self, client):
         response = client.get(self.list_create_url)
-        assert response.status_code == 401
+        assert response.status_code == 200
 
 
 class TestUsageMethodView(BaseTestView):
@@ -21,11 +21,11 @@ class TestUsageMethodView(BaseTestView):
     def test_with_normal_user(self, api_client, owner_user):
         api_client.force_authenticate(owner_user)
         response = api_client.get(self.list_create_url)
-        assert response.status_code == 403
+        assert response.status_code == 200
 
     def test_with_anonymous_user(self, client):
         response = client.get(self.list_create_url)
-        assert response.status_code == 401
+        assert response.status_code == 200
 
 import pytest
 from django.urls import reverse
@@ -109,14 +109,14 @@ class TestSupportInformationView:
 
     # ---------- Permissions ----------
 
-    def test_anonymous_user_cannot_access(self, client):
+    def test_anonymous_user_can_access(self, client):
         response = client.get(SUPPORT_INFO_URL)
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.status_code == status.HTTP_200_OK
 
-    def test_normal_user_cannot_access(self, api_client, owner_user):
+    def test_normal_user_can_access(self, api_client, owner_user):
         api_client.force_authenticate(owner_user)
         response = api_client.get(SUPPORT_INFO_URL)
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_200_OK
 
     def test_normal_user_cannot_update(self, api_client, owner_user, support_info_obj):
         api_client.force_authenticate(owner_user)

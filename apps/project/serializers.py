@@ -36,7 +36,8 @@ class ProjectSerializer(serializers.ModelSerializer):
             "items",
             "code",
             "amount_paid",
-            "remaining_amount"
+            "remaining_amount",
+            "reason_of_cancelled",
         ]
 
     def validate(self, attrs):
@@ -131,6 +132,12 @@ class ProjectScheduleTimeSerializer(serializers.Serializer):
     )
 
 
-class ProjectScheduleSerializer(serializers.Serializer):
+class ProjectScheduleTimesSerializer(serializers.Serializer):
     times = ProjectScheduleTimeSerializer(many=True, read_only=True)
     date = serializers.DateField(read_only=True)
+
+
+class ProjectScheduleSerializer(serializers.Serializer):
+    result = ProjectScheduleTimesSerializer(many=True, read_only=True)
+    open_time = serializers.TimeField(read_only=True)
+    closed_time = serializers.TimeField(read_only=True)
