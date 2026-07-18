@@ -29,6 +29,8 @@ class Costumer(BaseModel):
     address = models.TextField(
         max_length=1000,
         verbose_name=_("Address"),
+        null=True,
+        blank=True,
     )
 
     class Meta:
