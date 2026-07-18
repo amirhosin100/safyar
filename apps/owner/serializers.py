@@ -49,7 +49,7 @@ class SupportInformationSerializer(serializers.ModelSerializer):
 
 
 class UserOwnerSerializer(serializers.ModelSerializer):
-    branch = BranchSerializer(read_only=True)
+    active_branch = BranchSerializer(read_only=True)
 
     class Meta:
         model = User
@@ -57,8 +57,6 @@ class UserOwnerSerializer(serializers.ModelSerializer):
             "national_code",
             "phone_number",
             "full_name",
-            "branch",
-            "created_at",
+            "active_branch",
             "is_active",
-            "branch",
         ]

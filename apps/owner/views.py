@@ -3,7 +3,7 @@ from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 
 from apps.account.models import User
-from apps.core.permissions import IsSuperUser
+from apps.core.permissions import IsSuperUser, IsSuperUserOrReadOnly
 from apps.core.base_classes.base_viewset import BaseProtectionViewSet, BaseAPIView
 from apps.core.utils.pagination import OptionalPageNumberPagination
 
@@ -15,13 +15,13 @@ from apps.owner.serializers import UsageMethodSerializer, VersionSerializer, Sup
 class UsageMethodViewSet(viewsets.ModelViewSet):
     queryset = UsageMethod.objects.all()
     serializer_class = UsageMethodSerializer
-    permission_classes = (IsSuperUser,)
+    permission_classes = (IsSuperUserOrReadOnly,)
 
 
 class VersionViewSet(viewsets.ModelViewSet):
     queryset = Version.objects.all()
     serializer_class = VersionSerializer
-    permission_classes = (IsSuperUser,)
+    permission_classes = (IsSuperUserOrReadOnly,)
 
 
 class SmsLogListView(ListAPIView, BaseAPIView):
@@ -32,7 +32,7 @@ class SmsLogListView(ListAPIView, BaseAPIView):
 
 
 class SupportInformationView(views.APIView):
-    permission_classes = (IsSuperUser,)
+    permission_classes = (IsSuperUserOrReadOnly,)
     serializer_class = SupportInformationSerializer
 
     @staticmethod
@@ -56,6 +56,6 @@ class SupportInformationView(views.APIView):
 
 
 class UserOwnerViewSet(BaseProtectionViewSet):
-    queryset = User.objects.all()
+    queryset = User.objects.select_related("active_branch")
     serializer_class = UserOwnerSerializer
     permission_classes = (IsSuperUser,)

@@ -56,11 +56,22 @@ class Project(BaseModel):
         verbose_name=_("Status"),
         choices=ProjectStatusChoices.choices
     )
-    fee = models.PositiveIntegerField(
-        verbose_name=_("Fee"),
+    amount = models.PositiveIntegerField(
+        verbose_name=_("Amount"),
         default=0,
         editable=False
     )
+    amount_paid = models.PositiveIntegerField(
+        verbose_name=_("Amount Paid"),
+        default=0
+    )
+
+    remaining_amount = models.PositiveIntegerField(
+        verbose_name=_("Remain Paid"),
+        default=0,
+        editable=False
+    )
+
     reason_of_cancelled = models.TextField(
         verbose_name=_("Reason Of Cancelled"),
         null=True,
@@ -130,6 +141,11 @@ class Project(BaseModel):
 
         if self.status == ProjectStatusChoices.TURNED and self.turn_time is None:
             raise ValidationError(_("you cannot make a project width turned status and turn_time is null"))
+
+        if self.amount_paid > self.amount:
+            raise ValidationError(_("amount_paid must be less then or equal from amount"))
+
+        self.remaining_amount = self.amount - self.amount_paid
 
         if self.turn_time is None:
             self.turn_time = timezone.now()

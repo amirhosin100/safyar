@@ -15,22 +15,35 @@ from apps.core.wallet import WalletCenter
 from apps.project.choices import ProjectStatusChoices
 from apps.project.models import Project, MainPart, ProjectImage, FixItem
 from apps.project.serializers import ProjectSerializer, FixItemSerializer, MainPartSerializer, ProjectImageSerializer, \
-    ScheduleRequestSerializer, ProjectScheduleSerializer
+    ScheduleRequestSerializer, ProjectScheduleSerializer, ProjectListSerializer
 from django.utils.translation import gettext_lazy as _
 
 from apps.smoothing.models import Branch
 
 
 class ProjectViewSet(BaseProtectionViewSet):
-    queryset = Project.objects.prefetch_related("items")
-    serializer_class = ProjectSerializer
+    queryset = Project.objects.all()
     permission_classes = (HasBranch,)
+    serializer_class = ProjectSerializer
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return ProjectListSerializer
+        return ProjectSerializer
 
     def get_queryset(self):
-        return self.queryset.filter(
+        queryset = self.queryset.filter(
             smoothing=self.request.user.active_branch.smoothing,
             branch__in=self.request.user.allowed_branches.all()
         )
+        if self.action == "list":
+            queryset = queryset.prefetch_related("items", "colleagues").select_related("car__costumer")
+
+        return queryset
+
+    @extend_schema(responses=ProjectListSerializer)
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         car = serializer.validated_data['car']

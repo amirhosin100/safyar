@@ -40,6 +40,7 @@ def recalculate_project_fix_items(project_id):
             total_price=Sum(F("amount") - F("discount")),
         )
     )
+    amount = 0
 
     update_fields = {}
     for days_field, price_field in FIX_TYPE_FIELDS.values():
@@ -53,8 +54,9 @@ def recalculate_project_fix_items(project_id):
         days_field, price_field = fields
         update_fields[days_field] = row["total_days"]
         update_fields[price_field] = row["total_price"]
+        amount += row["total_price"]
 
-    Project.objects.filter(pk=project_id).update(**update_fields)
+    Project.objects.filter(pk=project_id).update(**update_fields,amount=amount)
 
     colleague_ids = list(
         FixItem.objects.filter(project_id=project_id, repairman__isnull=False)

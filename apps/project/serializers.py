@@ -8,6 +8,8 @@ from rest_framework import serializers
 from apps.project.models import Project, MainPart, FixArea, ProjectImage, FixItem
 from django.utils.translation import gettext_lazy as _
 
+from apps.smoothing.serializers import ColleagueSerializer
+
 
 class FixItemSerializer(serializers.ModelSerializer):
     class Meta:
@@ -30,9 +32,11 @@ class ProjectSerializer(serializers.ModelSerializer):
             "fuel_value",
             "turn_time",
             "status",
-            "fee",
+            "amount",
             "items",
             "code",
+            "amount_paid",
+            "remaining_amount"
         ]
 
     def validate(self, attrs):
@@ -62,6 +66,32 @@ class ProjectSerializer(serializers.ModelSerializer):
             attrs["turn_time"] = str(turn_time)
 
         return attrs
+
+
+class ProjectListSerializer(ProjectSerializer):
+    owner_name = serializers.SerializerMethodField(read_only=True)
+    owner_phone_number = serializers.SerializerMethodField(read_only=True)
+    colleagues = ColleagueSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Project
+        fields = ProjectSerializer.Meta.fields + [
+            "owner_name",
+            "owner_phone_number",
+            "smoothing_days",
+            "smoothing_price",
+            "mask_days",
+            "mask_price",
+            "paint_days",
+            "paint_price",
+            "colleagues"
+        ]
+
+    def get_owner_name(self, obj):
+        return obj.car.costumer.name
+
+    def get_owner_phone_number(self, obj):
+        return obj.car.costumer.phone_number
 
 
 class ProjectImageSerializer(serializers.ModelSerializer):
@@ -102,5 +132,5 @@ class ProjectScheduleTimeSerializer(serializers.Serializer):
 
 
 class ProjectScheduleSerializer(serializers.Serializer):
-    times = ProjectScheduleTimeSerializer(many=True,read_only=True)
+    times = ProjectScheduleTimeSerializer(many=True, read_only=True)
     date = serializers.DateField(read_only=True)
