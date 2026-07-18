@@ -11,8 +11,6 @@ services:
     volumes:
       - safyar_postgres_data_prod:/var/lib/postgresql/18/docker
     restart: always
-    ports:
-      - "${POSTGRES_EXTERNAL_PORT}:5432"
     networks:
       - safyar_network_prod
 
@@ -20,8 +18,6 @@ services:
     container_name: redis_safyar_prod
     image: redis:8
     restart: always
-    ports:
-      - "6379:6379"
     volumes:
       - safyar_redis_data_prod:/data
     command: redis-server --appendonly yes
