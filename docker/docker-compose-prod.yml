@@ -11,8 +11,6 @@ services:
     volumes:
       - safyar_postgres_data_prod:/var/lib/postgresql/18/docker
     restart: always
-    networks:
-      - safyar_network_prod
 
   redis:
     container_name: redis_safyar_prod
@@ -21,8 +19,6 @@ services:
     volumes:
       - safyar_redis_data_prod:/data
     command: redis-server --appendonly yes
-    networks:
-      - safyar_network_prod
 
   backend:
     container_name: backend_safyar_prod
@@ -42,8 +38,7 @@ services:
     volumes:
       - "../:/src"
     restart: always
-    networks:
-      - safyar_network_prod
+
     depends_on:
       - postgres
       - redis
@@ -52,7 +47,4 @@ services:
 volumes:
   safyar_postgres_data_prod:
   safyar_redis_data_prod:
-
-networks:
-  safyar_network_prod:
 
