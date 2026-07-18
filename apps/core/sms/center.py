@@ -12,6 +12,7 @@ from .messages import (
     SMOOTHING_DEACTIVATED,
     SMOOTHING_ACTIVATED,
 )
+from ..utils.time import to_persian_date
 
 
 class SMSCenter:
@@ -35,9 +36,8 @@ class SMSCenter:
 
     def send_turned_project_sms(self, project):
         phone_number = project.car.costumer.phone_number
-        # TODO make this to persian language
-        time = str(project.turn_time)
-        return self._send_sms(phone_number, TURNED_PROJECT % time)
+        date = to_persian_date(project.turn_time)
+        return self._send_sms(phone_number, TURNED_PROJECT % date)
 
     def send_wallet_stock_waring_sms(self, wallet):
         phone_number = wallet.smoothing.owner_user.phone_number

@@ -1,4 +1,5 @@
 import datetime
+import jdatetime
 
 
 def get_time(year, month, open_time, closed_time, week_days):
@@ -22,3 +23,8 @@ def get_time(year, month, open_time, closed_time, week_days):
         start_date += datetime.timedelta(days=1)
 
     return times
+
+
+def to_persian_date(date):
+    date = jdatetime.date.fromgregorian(date=date)
+    return date.strftime("%Y-%m-%d %H:%M")

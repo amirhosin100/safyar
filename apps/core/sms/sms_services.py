@@ -2,6 +2,7 @@ import requests
 import logging
 
 from .base import AbstractSMS
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,7 @@ class SMSIR(AbstractSMS):
 
     def send_single_sms(self, phone_number: str, message: str) -> bool:
         url = "https://api.sms.ir/v1/send/bulk"
+        message = self.add_static_message(message)
         data = {
             "lineNumber": self.line_number,
             "messageText": message,
@@ -45,6 +47,7 @@ class SMSIR(AbstractSMS):
             self, phone_numbers: list | tuple, message: str, time=None
     ) -> bool:
         url = "https://api.sms.ir/v1/send/bulk"
+        message = self.add_static_message(message)
         data = {
             "lineNumber": self.line_number,
             "messageText": message,
@@ -85,3 +88,9 @@ class SMSIR(AbstractSMS):
                     logger.critical("sms detail : %s", response.json())
 
         return status
+
+    @staticmethod
+    def add_static_message(text: str) -> str:
+        cancel_message = "لغو 11"
+        site_message = settings.SITE_URL
+        return text + f"\n {cancel_message} \n {site_message}"

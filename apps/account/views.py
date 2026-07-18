@@ -20,7 +20,7 @@ from apps.account.serializers import (
 )
 from apps.core.base_classes.base_viewset import BaseAPIView
 from apps.core.permissions import IsNotNormalUser, HasBranch, IsSuperUser
-from apps.core.sms import sms_center
+from apps.core.sms import sms_center, sms_class
 from apps.core.utils.jwt import get_tokens_for_user
 from django.db import IntegrityError
 from django.core.cache import cache
@@ -115,14 +115,13 @@ class SendCodeResetPasswordView(APIView):
             )
 
         code = "".join(random.choices("0123456789", k=6))
-        print(code)
-        # TODO fix this
-        # sms_status = get_sms_class().send_verification_code(user.phone_number,code)
-        # if not sms_status:
-        #     return Response(
-        #         {"detail":_("sms code didn't send!")},
-        #         status=status.HTTP_400_BAD_REQUEST
-        #     )
+
+        sms_status = sms_class.send_verification_code(user.phone_number,code)
+        if not sms_status:
+            return Response(
+                {"detail":_("sms code didn't send!")},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         national_code = user.national_code
         cache.set(verify_code.format(national_code=national_code), code, timeout=60)

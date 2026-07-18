@@ -12,9 +12,10 @@ redis = get_redis_connection("default")
 def get_sms_class():
     api_key = os.environ.get("SMS_API_KEY")
     line_number = int(os.environ.get("SMS_LINE_NUMBER"))
-    verify_template_id = os.environ.get("SMS_VERIFY_TEMPLATE_ID", "123456")
+    verify_template_id = os.environ.get("SMS_VERIFY_TEMPLATE_ID")
+    sms_verify_key = os.environ.get("SMS_VERIFY_KEY")
 
-    sms_class = SMSIR(api_key, line_number, verify_template_id)
+    sms_class = SMSIR(api_key, line_number, verify_template_id, sms_verify_key)
     return sms_class
 
 
@@ -44,6 +45,7 @@ def schedule_bulk_sms(phone_numbers, message):
             redis.hdel(prefix.sms_bulk.format(id=random_key), counter)
 
     return results
+
 
 def get_not_sent_sms():
     keys = redis.keys(prefix.sms_bulk_all)
