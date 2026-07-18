@@ -19,6 +19,8 @@ idna==3.18
 inflection==0.5.1
 iniconfig==2.3.0
 isodate==0.7.2
+jalali_core==1.0.0
+jdatetime==6.0.1
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
 lxml==6.1.1
@@ -34,7 +36,7 @@ pytest==9.1.1
 pytest-django==4.12.0
 python-dotenv==1.2.2
 PyYAML==6.0.3
-redis==8.0.0
+redis==8.0.1
 referencing==0.37.0
 requests==2.34.2
 requests-file==3.0.1
