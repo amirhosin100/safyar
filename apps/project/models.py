@@ -121,16 +121,9 @@ class Project(BaseModel):
         ]
         unique_together = (("branch", "turn_time"), ("branch", "code"))
 
-    def __str__(self):
-        return f"{self.car} | {self.created_at}"
-
     def save(self, *args, **kwargs):
         branch = Branch.objects.get(id=self.branch_id)
-        self.code = branch.next_follow_up_code
         self.smoothing = branch.smoothing
-
-        branch.next_follow_up_code += 1
-        branch.save()
 
         if self.status != ProjectStatusChoices.CANCELED and self.reason_of_cancelled:
             raise ValidationError(_("You just can write reason when status is CANCELED"))

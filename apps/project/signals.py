@@ -1,10 +1,11 @@
 from apps.core.sms import sms_center
-from apps.core.wallet import WalletCenter
 from apps.project.choices import FixTypeChoices, ProjectStatusChoices
 from apps.project.models import FixItem, Project
 from django.db.models import F, Sum
-from django.db.models.signals import post_delete, post_save
+from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
+
+from apps.smoothing.models import Branch
 
 
 @receiver(post_save, sender=Project)
@@ -71,3 +72,13 @@ def update_project_totals_on_fix_item_save(sender, instance, **kwargs):
 @receiver(post_delete, sender=FixItem)
 def update_project_totals_on_fix_item_delete(sender, instance, **kwargs):
     recalculate_project_fix_items(instance.project_id)
+
+
+@receiver(pre_save, sender=Project)
+def set_code(sender, instance, **kwargs):
+    if instance._state.adding:
+        branch = Branch.objects.get(id=instance.branch_id)
+
+        instance.code = branch.next_follow_up_code
+        branch.next_follow_up_code += 1
+        branch.save()

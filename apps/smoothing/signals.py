@@ -37,16 +37,9 @@ def check_codes(sender, instance, **kwargs):
             instance.next_follow_up_code != instance._pre_next_follow_up_code
     ):
         biggest_code = Project.objects.filter(branch=instance).aggregate(Max("code"))["code__max"]
-        if biggest_code and instance.next_follow_up_code < biggest_code:
+        if biggest_code is not None and instance.next_follow_up_code < biggest_code:
             raise ValidationError(f"next_follow_up_code must be grater then {biggest_code}")
 
-    if (
-            instance.pk and hasattr(instance, "_pre_first_follow_up_code") and
-            instance.first_follow_up_code != instance._pre_first_follow_up_code
-    ):
-        exists = Project.objects.filter(branch=instance).exists()
-        if exists:
-            raise ValidationError(f"You cannot change first_follow_up_code")
 
 
 @receiver(pre_save, sender=Smoothing)

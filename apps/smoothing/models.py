@@ -119,10 +119,7 @@ class Branch(BaseModel):
         verbose_name=_("Order"),
         choices=OrderChoices.choices,
     )
-    first_follow_up_code = models.PositiveBigIntegerField(
-        verbose_name=_("First Follow Up Code"),
-        default=0,
-    )
+
     next_follow_up_code = models.PositiveBigIntegerField(
         verbose_name=_("Next Follow Up Code"),
         default=0
@@ -162,7 +159,6 @@ class Branch(BaseModel):
     def from_db(cls, db, field_names, values):
         instance = super().from_db(db, field_names, values)
         instance._pre_next_follow_up_code = instance.next_follow_up_code
-        instance._pre_first_follow_up_code = instance.first_follow_up_code
         return instance
 
 
