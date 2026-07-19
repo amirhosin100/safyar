@@ -1,12 +1,10 @@
 from .base import *
 
-# force disable DEBUG
-
-DEBUG = False
 
 REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'] = (
     'apps.core.authentication.JWTAuthentication',
 )
+
 REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] = ["rest_framework.renderers.JSONRenderer"]
 
 DEFAULT_PROTOCOL = "https"
