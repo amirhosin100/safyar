@@ -122,7 +122,7 @@ class Branch(BaseModel):
 
     next_follow_up_code = models.PositiveBigIntegerField(
         verbose_name=_("Next Follow Up Code"),
-        default=0
+        default=1000
     )
     address = models.TextField(
         max_length=1000,
