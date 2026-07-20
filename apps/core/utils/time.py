@@ -35,7 +35,7 @@ def to_persian_date(date):
     if isinstance(date,str):
         date = parse_datetime(date)
 
-    date = jdatetime.date.fromgregorian(date=date)
+    date = jdatetime.datetime.fromgregorian(date=date)
     return date.strftime("%Y/%m/%d %H:%M")
 
 def add_30_minutes(time):
