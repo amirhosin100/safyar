@@ -8,6 +8,7 @@ from rest_framework import status
 from apps.account.models import User
 from apps.core.sms import sms_center
 from apps.core.tests.base_test import BaseTest
+from apps.core.utils.time import to_persian_date
 from apps.costumer.tests.fixtures.data import car_initial_data
 from apps.project.models import Project
 from apps.project.tests.fixtures.data import project_initial_data, project_create_data
@@ -117,7 +118,9 @@ class TestProjectSmsCenterCalls:
 
         # a fresh DB fetch normalizes turn_time to UTC; localize it back so it
         # matches what the signal saw in-memory (original +03:30 offset)
-        expected_message = TURNED_PROJECT % str(timezone.localtime(project.turn_time))
+        time = timezone.localtime(project.turn_time)
+        time = to_persian_date(time)
+        expected_message = TURNED_PROJECT % str(time)
         assert send_mock.call_count == 1
         assert send_mock.call_args[0][0] == car.costumer.phone_number
         assert send_mock.call_args[0][1] == expected_message

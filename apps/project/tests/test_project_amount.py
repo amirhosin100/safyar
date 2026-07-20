@@ -104,4 +104,4 @@ class TestProjectAmountFromFixItems:
         project.refresh_from_db()
         assert project.amount == 1000
         assert project.remaining_amount == 1000
-        assert project.paint_price == 0
+        assert project.paint_price is None

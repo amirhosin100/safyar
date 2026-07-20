@@ -1,5 +1,6 @@
 import datetime
 import jdatetime
+from django.utils.dateparse import parse_datetime
 
 
 def get_time(year, month, open_time, closed_time, week_days):
@@ -26,5 +27,8 @@ def get_time(year, month, open_time, closed_time, week_days):
 
 
 def to_persian_date(date):
+    if isinstance(date,str):
+        date = parse_datetime(date)
+
     date = jdatetime.date.fromgregorian(date=date)
-    return date.strftime("%Y-%m-%d %H:%M")
+    return date.strftime("%Y/%m/%d %H:%M")
