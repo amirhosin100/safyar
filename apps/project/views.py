@@ -3,11 +3,12 @@ import datetime
 from django.utils import timezone
 from rest_framework import status, generics
 from rest_framework.exceptions import PermissionDenied, ValidationError
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema
 
+from apps.core.access_views import AccessView
 from apps.core.base_classes.base_viewset import BaseProtectionViewSet
 from apps.core.permissions import HasBranch
 from apps.core.utils.time import get_time
@@ -175,9 +176,9 @@ class ProjectScheduleListView(APIView):
 
         # change data format
         data = {
-            "open_time":branch.open_time,
-            "close_time":branch.closed_time,
-            "result":[]
+            "open_time": branch.open_time,
+            "close_time": branch.closed_time,
+            "result": []
         }
         index = 0
         for date, times in times.items():
@@ -188,3 +189,9 @@ class ProjectScheduleListView(APIView):
             index += 1
 
         return Response(data=data, status=status.HTTP_200_OK)
+
+
+class AccessProjectView(AccessView):
+    queryset = Project.objects.prefetch_related("items", "colleagues").select_related("car__costumer")
+    serializer_class = ProjectSerializer
+

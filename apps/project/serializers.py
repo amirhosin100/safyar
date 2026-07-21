@@ -33,11 +33,11 @@ class ProjectSerializer(serializers.ModelSerializer):
             "turn_time",
             "status",
             "amount",
-            "items",
             "code",
             "amount_paid",
             "remaining_amount",
             "reason_of_cancelled",
+            "items",
         ]
 
     def validate(self, attrs):
