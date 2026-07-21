@@ -14,6 +14,9 @@ def generate_identify(object_id, expire_time):
     expire_time = localtime(expire_time)
     now = timezone.now()
 
+    if expire_time <= now:
+        raise ValueError("Expire time must be greater than now time")
+
     expire_time = expire_time - now
     identify = uuid4()
     redis.set(access_code.format(identify=identify), object_id, ex=expire_time)
@@ -26,5 +29,9 @@ def get_identify(identify: str):
     if value is None:
         return False, _("this code is invalid or expired")
 
-    value = int(value.decode())
+    value = value.decode()
+    if not value.isdigit():
+        return False, {"detail":_("this code is invalid")}
+
+    value = int(value)
     return True, value
