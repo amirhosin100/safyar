@@ -1,6 +1,6 @@
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, APIException, ParseError
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -25,18 +25,14 @@ class AccessView(APIView):
     def _set_object_id(self, object_id):
         self.object_id = object_id
 
-    def initial(self, request, *args, **kwargs):
-        super().initial(request, *args, **kwargs)
-        self.check_code(request)
-
     def check_code(self, request):
         identify_code = request.data.get("identify_code", None)
         if identify_code is None:
-            raise ValidationError(_("identify_code is required"))
+            raise ParseError(_("identify_code is required"))
 
         got, result = get_identify(identify_code)
         if got is False:
-            raise ValidationError(result)
+            raise ParseError(result)
 
         self._set_object_id(result)
 
@@ -47,6 +43,7 @@ class AccessView(APIView):
             raise ValueError("you have to set serializer_class")
 
     def post(self, request):
+        self.check_code(request)
         try:
             project = self.queryset.get(id=self.object_id)
         except self.queryset.model.DoesNotExist:

@@ -14,10 +14,10 @@ def generate_identify(object_id, expire_time):
     expire_time = localtime(expire_time)
     now = timezone.now()
 
-    if expire_time <= now:
-        raise ValueError("Expire time must be greater than now time")
-
     expire_time = expire_time - now
+    if expire_time.total_seconds() <= 1:
+        raise ValueError("Expire time must be greater than 1")
+
     identify = uuid4()
     redis.set(access_code.format(identify=identify), object_id, ex=expire_time)
 
