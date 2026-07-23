@@ -21,7 +21,6 @@ def generate_identify(obj, expire_time=None):
     identify = str(uuid4())
     redis.set(access_code.format(identify=identify), obj.id, ex=expire_time)
 
-    # TODO remove keys when something happened
     if expire_time is None:
         key = access_codes.format(object_id=obj.id, model_name=obj.__class__.__name__)
         redis.sadd(key, identify)
