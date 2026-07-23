@@ -13,6 +13,9 @@ from apps.project.tests.fixtures.data import project_initial_data, project_creat
 from apps.smoothing.choices import JobTypeChoices
 from apps.smoothing.models import Colleague, Smoothing
 from apps.wallet.choices import TransactionStatusChoices, TransactionTypeChoices
+import datetime
+from django.utils import timezone
+from apps.costumer.choices import GenderChoices
 
 pytestmark = pytest.mark.django_db
 
@@ -285,6 +288,39 @@ class TestBranchCostumerReportView:
             project.branch = user.active_branch
             project.save()
 
+    # ---- helpers for the tests below ----
+
+    @staticmethod
+    def _create_costumer(branch, phone_number=None):
+        """Create a Costumer bound to the given branch (distinct phone_number per call)."""
+        return Costumer.objects.create(
+            branch=branch,
+            name="test costumer",
+            gender=GenderChoices.MALE,
+            phone_number=phone_number or f"09{random.randint(100000000, 999999999)}",
+            address="test address",
+        )
+
+    @staticmethod
+    def _create_car(costumer):
+        """Distinct plate per call, so the same costumer can have multiple cars/projects."""
+        plate = f"{random.randint(10, 99)}-الف-{random.randint(100, 999)}-{random.randint(10, 99)}"
+        return Car.objects.create(costumer=costumer, plate=plate, color="red", name="test car")
+
+    @classmethod
+    def _create_project_for_costumer(
+            cls, branch, costumer=None, status=ProjectStatusChoices.SUBMITTED, turn_time=None
+    ):
+        costumer = costumer or cls._create_costumer(branch)
+        car = cls._create_car(costumer)
+        return Project.objects.create(
+            branch=branch,
+            car=car,
+            kilometer_of_car=100,
+            fuel_value=FuelTypeChoices.FULL,
+            status=status,
+            turn_time=turn_time or timezone.now(),
+        )
 
     @pytest.mark.parametrize("create_two_projects", [True, False])
     def test_correct(self, api_client, owner_user, create_two_projects):
@@ -297,3 +333,179 @@ class TestBranchCostumerReportView:
         assert response.data["total_costumers"] == Costumer.objects.count()
         assert response.data["active_costumers"] == n
         assert response.data["today_submissions"] == 1
+
+    # ---------------- total_costumers ----------------
+
+    def test_total_costumers_only_counts_own_branch(self, api_client, owner_user, super_user):
+        self._create_costumer(owner_user.active_branch)
+        self._create_costumer(owner_user.active_branch)
+        self._create_costumer(super_user.active_branch)
+
+        api_client.force_authenticate(owner_user)
+        response = api_client.get(self.url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["total_costumers"] == 2
+
+    def test_total_costumers_zero_when_no_costumers(self, api_client, owner_user):
+        api_client.force_authenticate(owner_user)
+        response = api_client.get(self.url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["total_costumers"] == 0
+
+    # ---------------- active_costumers ----------------
+
+    def test_active_costumers_counts_distinct_costumers_only_once(self, api_client, owner_user):
+        """A costumer with two projects/cars must still count as 1 active costumer."""
+        costumer = self._create_costumer(owner_user.active_branch)
+        self._create_project_for_costumer(owner_user.active_branch, costumer, turn_time=timezone.now())
+        self._create_project_for_costumer(
+            owner_user.active_branch, costumer, turn_time=timezone.now() + datetime.timedelta(hours=1)
+        )
+
+        api_client.force_authenticate(owner_user)
+        response = api_client.get(self.url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["active_costumers"] == 1
+
+    def test_active_costumers_ignores_costumers_without_any_project(self, api_client, owner_user):
+        self._create_costumer(owner_user.active_branch)  # no project at all
+
+        api_client.force_authenticate(owner_user)
+        response = api_client.get(self.url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["active_costumers"] == 0
+
+    def test_active_costumers_excludes_other_smoothing(self, api_client, owner_user, super_user):
+        self._create_project_for_costumer(super_user.active_branch)
+
+        api_client.force_authenticate(owner_user)
+        response = api_client.get(self.url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["active_costumers"] == 0
+
+    def test_active_costumers_excludes_branch_not_in_allowed_branches(self, api_client, admin_user, owner_user):
+        """
+        NOTE: active_costumers is filtered by `allowed_branches`, not `active_branch`.
+        A project on a branch of the SAME smoothing that the admin isn't allowed
+        to access must not be counted.
+        """
+        other_branch = owner_user.smoothing.branches.create(name="other branch", order=2)
+        self._create_project_for_costumer(other_branch)
+
+        admin_user.active_branch = owner_user.active_branch
+        admin_user.allowed_branches.set([owner_user.active_branch])  # other_branch NOT included
+        admin_user.save()
+
+        api_client.force_authenticate(admin_user)
+        response = api_client.get(self.url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["active_costumers"] == 0
+
+    def test_active_costumers_includes_other_allowed_branch_in_same_smoothing(self, api_client, owner_user):
+        """
+        Documents current behavior: unlike total_costumers, active_costumers is NOT
+        scoped to `active_branch` only - any project inside the same smoothing whose
+        branch is in `allowed_branches` counts too. owner_user's allowed_branches
+        auto-include every branch of their own smoothing (see Branch post_save signal).
+        """
+        other_branch = owner_user.smoothing.branches.create(name="other branch", order=2)
+        self._create_project_for_costumer(other_branch)
+
+        api_client.force_authenticate(owner_user)
+        response = api_client.get(self.url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["active_costumers"] == 1
+
+    # ---------------- today_submissions ----------------
+
+    def test_today_submissions_counts_only_submitted_status(self, api_client, owner_user):
+        self._create_project_for_costumer(owner_user.active_branch, status=ProjectStatusChoices.SUBMITTED)
+        self._create_project_for_costumer(
+            owner_user.active_branch,
+            status=ProjectStatusChoices.CANCELED,
+            turn_time=timezone.now() + datetime.timedelta(hours=1),
+        )
+        self._create_project_for_costumer(
+            owner_user.active_branch,
+            status=ProjectStatusChoices.DELIVERED,
+            turn_time=timezone.now() + datetime.timedelta(hours=2),
+        )
+
+        api_client.force_authenticate(owner_user)
+        response = api_client.get(self.url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["today_submissions"] == 1
+
+    def test_today_submissions_excludes_other_days(self, api_client, owner_user):
+        yesterday = timezone.now() - datetime.timedelta(days=1)
+        self._create_project_for_costumer(
+            owner_user.active_branch, status=ProjectStatusChoices.SUBMITTED, turn_time=yesterday
+        )
+
+        api_client.force_authenticate(owner_user)
+        response = api_client.get(self.url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["today_submissions"] == 0
+
+    def test_today_submissions_excludes_other_branch(self, api_client, owner_user, super_user):
+        self._create_project_for_costumer(super_user.active_branch, status=ProjectStatusChoices.SUBMITTED)
+
+        api_client.force_authenticate(owner_user)
+        response = api_client.get(self.url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["today_submissions"] == 0
+
+    def test_today_submissions_counts_multiple_today(self, api_client, owner_user):
+        self._create_project_for_costumer(
+            owner_user.active_branch, status=ProjectStatusChoices.SUBMITTED, turn_time=timezone.now()
+        )
+        self._create_project_for_costumer(
+            owner_user.active_branch,
+            status=ProjectStatusChoices.SUBMITTED,
+            turn_time=timezone.now() + datetime.timedelta(hours=1),
+        )
+
+        api_client.force_authenticate(owner_user)
+        response = api_client.get(self.url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["today_submissions"] == 2
+
+    # ---------------- permissions ----------------
+
+    def test_user_without_active_branch_forbidden(self, api_client, admin_user):
+        admin_user.active_branch = None
+        admin_user.save()
+        api_client.force_authenticate(admin_user)
+
+        response = api_client.get(self.url)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_normal_user_is_allowed(self, api_client, normal_user):
+        """
+        Unlike other report views (which also require IsNotNormalUser),
+        BranchCostumerReportView only uses HasBranch - normal users get 200 here.
+        """
+        api_client.force_authenticate(normal_user)
+        response = api_client.get(self.url)
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_admin_user_is_allowed(self, api_client, admin_user):
+        api_client.force_authenticate(admin_user)
+        response = api_client.get(self.url)
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_unauthenticated(self, client):
+        response = client.get(self.url)
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
