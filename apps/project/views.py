@@ -193,5 +193,5 @@ class ProjectScheduleListView(APIView):
 
 class AccessProjectView(AccessView):
     queryset = Project.objects.prefetch_related("items", "colleagues").select_related("car__costumer")
-    serializer_class = ProjectSerializer
+    serializer_class = ProjectListSerializer
 

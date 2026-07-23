@@ -13,6 +13,7 @@ from .messages import (
     SMOOTHING_ACTIVATED,
 )
 from ..utils.time import to_persian_date
+from ..utils.url import create_detail_project_url
 
 
 class SMSCenter:
@@ -32,12 +33,14 @@ class SMSCenter:
 
     def send_accepted_project_sms(self, project):
         phone_number = project.car.costumer.phone_number
-        return self._send_sms(phone_number, ACCEPTED_PROJECT)
+        url = create_detail_project_url(project)
+        return self._send_sms(phone_number, ACCEPTED_PROJECT % url)
 
     def send_turned_project_sms(self, project):
         phone_number = project.car.costumer.phone_number
         date = to_persian_date(project.turn_time)
-        return self._send_sms(phone_number, TURNED_PROJECT % date)
+        url = create_detail_project_url(project)
+        return self._send_sms(phone_number, TURNED_PROJECT % (date, url))
 
     def send_wallet_stock_waring_sms(self, wallet):
         phone_number = wallet.smoothing.owner_user.phone_number
@@ -71,5 +74,6 @@ class SMSCenter:
     def send_smoothing_activated_sms(self, user):
         phone_number = user.phone_number
         return self._send_sms(phone_number, SMOOTHING_ACTIVATED)
+
 
 sms_center = SMSCenter()

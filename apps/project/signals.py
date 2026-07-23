@@ -1,4 +1,7 @@
+from django_redis import get_redis_connection
+
 from apps.core.sms import sms_center
+from apps.core.utils.prefix import access_codes
 from apps.project.choices import FixTypeChoices, ProjectStatusChoices
 from apps.project.models import FixItem, Project
 from django.db.models import F, Sum, Max
@@ -6,6 +9,8 @@ from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
 from apps.smoothing.models import Branch
+
+redis = get_redis_connection()
 
 
 @receiver(post_save, sender=Project)
@@ -20,6 +25,11 @@ def send_sms(sender, instance, created, **kwargs):
             case ProjectStatusChoices.SUBMITTED:
                 sms_center.send_accepted_project_sms(instance)
 
+    #TODO write test for it
+    if Project.status == ProjectStatusChoices.DELIVERED:
+        keys = redis.smembers(access_codes.format(model_name=Project.__name__,object_id=instance.pk))
+        if keys:
+            redis.delete(*keys)
 
 FIX_TYPE_FIELDS = {
     FixTypeChoices.SMOOTHING: ("smoothing_days", "smoothing_price"),

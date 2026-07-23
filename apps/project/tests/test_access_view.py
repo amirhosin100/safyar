@@ -30,7 +30,7 @@ class TestAccessProjectView:
 
     def test_correct(self, client):
         project = project_initial_data.create_object()
-        code, data = self.get_data(project.id)
+        code, data = self.get_data(project)
 
         response = client.post(self.url, data=data)
 
@@ -40,7 +40,7 @@ class TestAccessProjectView:
     def test_response_contains_serialized_project_data(self, client):
         """Sanity check that the actual project data is returned, not just the id."""
         project = project_initial_data.create_object()
-        _, data = self.get_data(project.id)
+        _, data = self.get_data(project)
 
         response = client.post(self.url, data=data)
 
@@ -50,7 +50,7 @@ class TestAccessProjectView:
 
     def test_code_works_without_any_authentication(self, client):
         project = project_initial_data.create_object()
-        _, data = self.get_data(project.id)
+        _, data = self.get_data(project)
 
         response = client.post(self.url, data=data)
         assert response.status_code == status.HTTP_200_OK
@@ -67,7 +67,7 @@ class TestAccessProjectView:
         project = project_initial_data.create_object()
         project.branch = super_user.active_branch
         project.save()
-        _, data = self.get_data(project.id)
+        _, data = self.get_data(project)
 
         api_client.force_authenticate(owner_user)
         response = api_client.post(self.url, data=data)
@@ -77,7 +77,7 @@ class TestAccessProjectView:
 
     def test_code_can_be_used_multiple_times(self, client):
         project = project_initial_data.create_object()
-        _, data = self.get_data(project.id)
+        _, data = self.get_data(project)
 
         for _ in range(3):
             response = client.post(self.url, data=data)
@@ -87,8 +87,8 @@ class TestAccessProjectView:
     def test_two_different_codes_for_two_different_projects_are_independent(self, client):
         project_1 = project_initial_data.create_object()
         project_2 = project_initial_data.create_object()
-        _, data_1 = self.get_data(project_1.id)
-        _, data_2 = self.get_data(project_2.id)
+        _, data_1 = self.get_data(project_1)
+        _, data_2 = self.get_data(project_2)
 
         response_1 = client.post(self.url, data=data_1)
         response_2 = client.post(self.url, data=data_2)
@@ -117,7 +117,7 @@ class TestAccessProjectView:
     def test_random_identify_code_returns_400(self, client):
         response = client.post(self.url, data={"identify_code": "not-a-real-code"})
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_404_NOT_FOUND
         assert response.data["detail"] == "this code is invalid or expired"
 
     def test_empty_identify_code_returns_400(self, client):
@@ -125,20 +125,20 @@ class TestAccessProjectView:
         falls through to the redis lookup, which simply misses."""
         response = client.post(self.url, data={"identify_code": ""})
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_404_NOT_FOUND
         assert response.data["detail"] == "this code is invalid or expired"
 
     def test_whitespace_identify_code_returns_400(self, client):
         response = client.post(self.url, data={"identify_code": "   "})
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_404_NOT_FOUND
         assert response.data["detail"] == "this code is invalid or expired"
 
     # ---------------- expiration ----------------
 
     def test_expired_code_returns_400(self, client):
         project = project_initial_data.create_object()
-        code, data = self.get_data(project.id)
+        code, data = self.get_data(project)
 
         # simulate time passing by directly removing the redis key,
         # instead of sleeping in the test
@@ -146,25 +146,25 @@ class TestAccessProjectView:
 
         response = client.post(self.url, data=data)
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_404_NOT_FOUND
         assert response.data["detail"] == "this code is invalid or expired"
 
     def test_code_really_expires_after_its_ttl(self, client):
         """Slower end-to-end test confirming the TTL passed to redis's SET is
         actually honored, not just simulated by deleting the key."""
         project = project_initial_data.create_object()
-        _, data = self.get_data(project.id, expire_time=timezone.now() + timedelta(seconds=2))
+        _, data = self.get_data(project, expire_time=timezone.now() + timedelta(seconds=2))
 
         time.sleep(2.2)
 
         response = client.post(self.url, data=data)
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_404_NOT_FOUND
         assert response.data["detail"] == "this code is invalid or expired"
 
     def test_code_still_valid_right_before_expiry(self, client):
         project = project_initial_data.create_object()
-        _, data = self.get_data(project.id, expire_time=timezone.now() + timedelta(seconds=5))
+        _, data = self.get_data(project, expire_time=timezone.now() + timedelta(seconds=5))
 
         response = client.post(self.url, data=data)
 
@@ -175,14 +175,14 @@ class TestAccessProjectView:
         past_time = timezone.now() - timedelta(hours=1)
 
         with pytest.raises(ValueError):
-            generate_identify(project.id, past_time)
+            generate_identify(project, past_time)
 
 
     # ---------------- underlying object missing ----------------
 
     def test_soft_deleted_project_returns_404(self, client):
         project = project_initial_data.create_object()
-        code, data = self.get_data(project.id)
+        code, data = self.get_data(project)
 
         project.delete()  # BaseModel.delete() -> soft delete (deleted=True)
 
@@ -192,12 +192,10 @@ class TestAccessProjectView:
         assert response.data["detail"] == "Project not found"
 
     def test_code_for_nonexistent_project_id_returns_404(self, client):
-        _, data = self.get_data(project_id=999999)
-
-        response = client.post(self.url, data=data)
+        response = client.post(self.url, data= {"identify_code": "9999"})
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert response.data["detail"] == "Project not found"
+        assert response.data["detail"] == "this code is invalid or expired"
 
     # ---------------- HTTP method ----------------
 

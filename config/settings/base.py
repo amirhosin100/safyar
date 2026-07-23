@@ -244,3 +244,4 @@ AZ_IRANIAN_BANK_GATEWAYS = {
 SITE_ID = 1
 SITE_URL = os.environ.get("SITE_URL", "safyar.ir")
 WALLET_CALLBACK_URL = os.environ.get("WALLET_CALLBACK_URL", "")
+PROJECT_DETAIL_URL = "project-access/{identify_code}"

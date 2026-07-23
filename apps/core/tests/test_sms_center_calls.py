@@ -4,12 +4,15 @@ from unittest.mock import patch
 
 import pytest
 from django.urls import reverse
+from django_redis import get_redis_connection
 from rest_framework import status
 
 from apps.account.models import User
 from apps.core.sms import sms_center
 from apps.core.tests.base_test import BaseTest
+from apps.core.utils.prefix import access_codes
 from apps.core.utils.time import to_persian_date
+from apps.core.utils.url import create_detail_project_url, make_url
 from apps.costumer.tests.fixtures.data import car_initial_data
 from apps.project.models import Project
 from apps.project.tests.fixtures.data import project_initial_data, project_create_data
@@ -33,6 +36,8 @@ from apps.core.wallet.values import SEND_SINGLE_SMS
 from apps.costumer.tests.fixtures.data import costumer_initial_data
 
 pytestmark = pytest.mark.django_db
+
+redis = get_redis_connection()
 
 
 class TestProjectSmsCenterCalls:
@@ -67,6 +72,21 @@ class TestProjectSmsCenterCalls:
 
         return data
 
+    @staticmethod
+    def _get_url(obj):
+        keys = redis.smembers(access_codes.format(model_name=Project.__name__, object_id=obj.id))
+        redis.delete(*keys)
+
+        code = keys.pop().decode()
+        endpoint = settings.PROJECT_DETAIL_URL.format(identify_code=code)
+
+        return make_url(endpoint)
+
+    def delete_redis_keys(self):
+        keys = redis.keys("access_codes:*")
+        if keys:
+            redis.delete(*keys)
+
     def test_create_canceled_project_calls_send_canceled_project_sms(self, api_client, owner_user):
         car = self._create_car_for_branch(owner_user.active_branch)
         data = self._project_payload(car, owner_user.active_branch, ProjectStatusChoices.CANCELED)
@@ -96,20 +116,23 @@ class TestProjectSmsCenterCalls:
         ) as center_mock, \
                 patch("apps.core.sms.sms_class.send_single_sms", return_value=True) as send_mock:
             response = api_client.post(self.list_create_url, data=data)
+            project = Project.objects.get(id=response.data["id"])
 
+        url = self._get_url(project)
         assert response.status_code == status.HTTP_201_CREATED
         assert center_mock.call_count == 1
         assert center_mock.call_args[0][0].id == response.data["id"]
 
         assert send_mock.call_count == 1
         assert send_mock.call_args[0][0] == car.costumer.phone_number
-        assert send_mock.call_args[0][1] == ACCEPTED_PROJECT
+        assert send_mock.call_args[0][1] == ACCEPTED_PROJECT % url
 
     def test_create_turned_project_calls_send_turned_project_sms(self, api_client, owner_user):
         car = self._create_car_for_branch(owner_user.active_branch)
         data = self._project_payload(car, owner_user.active_branch, ProjectStatusChoices.TURNED)
         api_client.force_authenticate(owner_user)
 
+        self.delete_redis_keys()
         with patch.object(
                 sms_center, "send_turned_project_sms", wraps=sms_center.send_turned_project_sms
         ) as center_mock, \
@@ -123,9 +146,10 @@ class TestProjectSmsCenterCalls:
 
         # a fresh DB fetch normalizes turn_time to UTC; localize it back so it
         # matches what the signal saw in-memory (original +03:30 offset)
+        url = self._get_url(project)
         time = timezone.localtime(project.turn_time)
         time = to_persian_date(time)
-        expected_message = TURNED_PROJECT % str(time)
+        expected_message = TURNED_PROJECT % (str(time), url)
         assert send_mock.call_count == 1
         assert send_mock.call_args[0][0] == car.costumer.phone_number
         assert send_mock.call_args[0][1] == expected_message

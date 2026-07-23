@@ -1,6 +1,6 @@
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.exceptions import ValidationError, APIException, ParseError
+from rest_framework.exceptions import ValidationError, APIException, ParseError, NotFound
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -30,8 +30,10 @@ class AccessView(APIView):
         if identify_code is None:
             raise ParseError(_("identify_code is required"))
 
-        got, result = get_identify(identify_code)
-        if got is False:
+        status_code, result = get_identify(identify_code)
+        if status_code == 404:
+            raise NotFound(result)
+        elif status_code != 200:
             raise ParseError(result)
 
         self._set_object_id(result)
