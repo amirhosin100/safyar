@@ -1,7 +1,7 @@
 from apps.core.sms import sms_center
 from apps.project.choices import FixTypeChoices, ProjectStatusChoices
 from apps.project.models import FixItem, Project
-from django.db.models import F, Sum
+from django.db.models import F, Sum, Max
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
@@ -83,5 +83,9 @@ def set_code(sender, instance, **kwargs):
         branch = Branch.objects.get(id=instance.branch_id)
 
         instance.code = branch.next_follow_up_code
-        branch.next_follow_up_code += 1
+        max_code = Project.objects.filter(branch=branch).aggregate(Max("code"))["code__max"]
+        if max_code is not None:
+            branch.next_follow_up_code = max_code + 2
+        else:
+            branch.next_follow_up_code += 1
         branch.save()
