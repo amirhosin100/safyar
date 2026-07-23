@@ -1,7 +1,9 @@
+import datetime
 import random
 
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 
 from apps.core.tests.base_test import BaseTest
@@ -45,6 +47,9 @@ class TestProjectCreationDecreasesWallet:
         data["car"] = car.id
         data["branch"] = branch.id
         data["status"] = status_value
+        del data["turn_time"]
+        if status_value == ProjectStatusChoices.TURNED:
+            data["turn_time"] = (timezone.now() + datetime.timedelta(days=1)).replace(minute=0)
         return data
 
     def test_creating_canceled_project_decreases_wallet_by_correct_amount(self, api_client, owner_user):

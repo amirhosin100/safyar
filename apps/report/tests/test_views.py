@@ -5,21 +5,26 @@ from django.urls import reverse
 from rest_framework import status
 
 from apps.account.models import User
-from apps.costumer.tests.fixtures.data import car_initial_data
+from apps.costumer.models import Costumer, Car
+from apps.costumer.tests.fixtures.data import car_initial_data, costumer_initial_data
+from apps.project.choices import FuelTypeChoices, ProjectStatusChoices
+from apps.project.models import Project
+from apps.project.tests.fixtures.data import project_initial_data, project_create_data
 from apps.smoothing.choices import JobTypeChoices
 from apps.smoothing.models import Colleague, Smoothing
 from apps.wallet.choices import TransactionStatusChoices, TransactionTypeChoices
 
 pytestmark = pytest.mark.django_db
 
-#TODO write tests for BranchCostumerReportView and SmoothingBranchReportView
+
+# TODO write tests for BranchCostumerReportView and SmoothingBranchReportView
 class TestBranchCarCountView:
     url = reverse("report:branch-car-count")
 
     @staticmethod
     def _create_car_for_branch(branch):
         car = car_initial_data.create_object()
-        car.costumer.phone_number = f"09{random.randint(100000000,999999999)}"
+        car.costumer.phone_number = f"09{random.randint(100000000, 999999999)}"
         car.costumer.branch = branch
         car.costumer.save()
         return car
@@ -237,3 +242,58 @@ class TestGlobalReportView:
     def test_unauthenticated(self, client):
         response = client.get(self.url)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+class TestBranchCostumerReportView:
+    url = reverse("report:branch-costumers")
+
+    @staticmethod
+    def create_costumers(user, create_two_project=False):
+        project = project_initial_data.create_object()
+        costumer_1 = project.car.costumer
+
+        p1 = Project.objects.create(
+            branch=project.branch,
+            car=project.car,
+            kilometer_of_car=100,
+            fuel_value=FuelTypeChoices.HALF,
+            status=ProjectStatusChoices.SUBMITTED
+        )
+
+        costumer_initial_data.request_data["phone_number"] = f"0912{random.randint(1000000,9999999)}"
+        costumer_2 = Costumer.objects.create(**costumer_initial_data.request_data)
+
+        projects = [p1,project]
+        if create_two_project:
+            del car_initial_data.request_data["costumer"]
+            car = Car.objects.create(**car_initial_data.request_data, costumer=costumer_2)
+
+            p2 = Project.objects.create(
+                branch=costumer_2.branch,
+                car=car,
+                kilometer_of_car=100,
+                fuel_value=FuelTypeChoices.HALF,
+                status=ProjectStatusChoices.SUBMITTED
+            )
+            projects.append(p2)
+
+        for costumer in (costumer_1, costumer_2):
+            costumer.branch = user.active_branch
+            costumer.save()
+
+        for project in projects:
+            project.branch = user.active_branch
+            project.save()
+
+
+    @pytest.mark.parametrize("create_two_projects", [True, False])
+    def test_correct(self, api_client, owner_user, create_two_projects):
+        n = 2 if create_two_projects else 1
+        api_client.force_authenticate(owner_user)
+        self.create_costumers(owner_user, create_two_projects)
+
+        response = api_client.get(self.url)
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["total_costumers"] == Costumer.objects.count()
+        assert response.data["active_costumers"] == n
+        assert response.data["today_submissions"] == 1

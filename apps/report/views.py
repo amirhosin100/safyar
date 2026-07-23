@@ -149,13 +149,15 @@ class BranchCostumerReportView(APIView):
 
         total_costumers = Costumer.objects.filter(branch=branch).count()
 
-        # TODO: define what an "active" costumer means and implement the real query
-        active_costumers = 0
+        active_costumers = Project.objects.filter(
+            smoothing=branch.smoothing,
+            branch__in=request.user.allowed_branches.all(),
+        ).values("car__costumer").distinct().count()
 
         today_submissions = Project.objects.filter(
             branch=branch,
             status=ProjectStatusChoices.SUBMITTED,
-            created_at__date=today,
+            turn_time__date=today,
         ).count()
 
         data = {
@@ -182,7 +184,7 @@ class SmoothingBranchReportView(APIView):
         total_branches = Branch.objects.filter(smoothing=smoothing).count()
 
         # TODO: define what an "active" branch means and implement the real query
-        active_branches = 0
+        active_branches = total_branches
 
         data = {
             "total_branches": total_branches,

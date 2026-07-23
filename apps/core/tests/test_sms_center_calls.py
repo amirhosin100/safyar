@@ -1,4 +1,5 @@
 # apps/core/tests/test_sms_center_calls.py
+import datetime
 from unittest.mock import patch
 
 import pytest
@@ -60,6 +61,10 @@ class TestProjectSmsCenterCalls:
         data["car"] = car.id
         data["branch"] = branch.id
         data["status"] = status_value
+        del data["turn_time"]
+        if status_value == ProjectStatusChoices.TURNED:
+            data["turn_time"] = (timezone.now() + datetime.timedelta(days=1)).replace(minute=0)
+
         return data
 
     def test_create_canceled_project_calls_send_canceled_project_sms(self, api_client, owner_user):

@@ -133,6 +133,9 @@ class Project(BaseModel):
         unique_together = (("branch", "turn_time"), ("branch", "code"))
 
     def save(self, *args, **kwargs):
+        if self.branch_id is None:
+            raise ValidationError(_("Branch is required"))
+
         branch = Branch.objects.get(id=self.branch_id)
         self.smoothing = branch.smoothing
 

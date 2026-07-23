@@ -6,7 +6,7 @@ from rest_framework import status
 from apps.core.tests.base_test import BaseTestModel
 from apps.core.tests.image import create_image
 from apps.costumer.tests.fixtures.data import car_initial_data
-from apps.project.choices import FuelTypeChoices, FixTypeChoices, TemporalChoices
+from apps.project.choices import FuelTypeChoices, FixTypeChoices, TemporalChoices, ProjectStatusChoices
 from apps.project.models import Project, ProjectImage, FixItem, MainPart, FixArea
 from apps.project.tests.fixtures.data import project_initial_data
 from apps.smoothing.tests.fixtures.data import branch_initial_data
@@ -31,6 +31,7 @@ class TestProjectView(BaseTestModel):
         car = car_initial_data.create_object()
         owner_user.active_branch.smoothing.wallet.stock = 999999
         owner_user.active_branch.smoothing.wallet.save()
+        del self.create_data.request_data["turn_time"]
 
         for user in (owner_user, admin_user, normal_user):
             api_client.force_authenticate(user=user)
@@ -42,6 +43,7 @@ class TestProjectView(BaseTestModel):
 
             self.create_data.request_data["car"] = car.id
             self.create_data.request_data["branch"] = car.branch.id
+            self.create_data.request_data["status"] = ProjectStatusChoices.SUBMITTED
 
             response = api_client.post(self.list_create_url, data=self.create_data.request_data)
             assert response.status_code == status.HTTP_201_CREATED
@@ -51,6 +53,8 @@ class TestProjectView(BaseTestModel):
         car = car_initial_data.create_object()
         car.costumer.branch = owner_user.active_branch
         car.costumer.save()
+        del self.create_data.request_data["turn_time"]
+        self.create_data.request_data["status"] = ProjectStatusChoices.SUBMITTED
 
         for user, status_code in ((normal_user, 403), (super_user, 201)):
             # wallet decreased is the *requesting* user's own active_branch.smoothing.wallet
@@ -69,6 +73,8 @@ class TestProjectView(BaseTestModel):
     def test_update_with_allowed_users(self, api_client, owner_user, normal_user, admin_user):
         project = self.initial_data.create_object()
 
+        self.update_data.request_data["status"] = ProjectStatusChoices.SUBMITTED
+        del self.update_data.request_data["turn_time"]
         for user in (owner_user, admin_user, normal_user):
             user.active_branch = owner_user.active_branch
             user.allowed_branches.set([owner_user.active_branch])
@@ -81,6 +87,7 @@ class TestProjectView(BaseTestModel):
 
             self.update_data.request_data["kilometer_of_car"] = 123
             self.update_data.request_data["branch"] = project.branch.id
+
             response = api_client.patch(self.detail_update_delete_url(project.pk), data=self.update_data.request_data)
             project.refresh_from_db()
             assert response.status_code == status.HTTP_200_OK

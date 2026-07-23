@@ -59,6 +59,7 @@ class UserRegisterSerializer(serializers.Serializer):
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
+    #TODO change this to read_only
     active_branch = serializers.PrimaryKeyRelatedField(
         queryset=Branch.objects.all(),
         required=True

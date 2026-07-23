@@ -1,6 +1,7 @@
 import datetime
 
 from django.core.validators import RegexValidator
+from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
@@ -57,8 +58,11 @@ class ProjectSerializer(serializers.ModelSerializer):
             turn_time = parse_datetime(str(turn_time))
             turn_time = turn_time.replace(microsecond=0, second=0)
 
+            if turn_time < timezone.now():
+                raise ValidationError(_("turn_time must be newer than now time"))
+
             if turn_time.minute not in [0, 30]:
-                raise ValidationError(_("turn_time must be 0 or 30"))
+                raise ValidationError(_("turn_time minutes must be 0 or 30"))
 
             time = datetime.time(hour=turn_time.hour, minute=turn_time.minute)
             if not (closed_time >= time >= open_time):
