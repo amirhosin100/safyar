@@ -20,7 +20,7 @@ services:
     restart: always
     volumes:
       - safyar_redis_data_prod:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --appendfsync everysec
     networks:
       - safyar_network_prod
 
