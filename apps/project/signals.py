@@ -91,11 +91,12 @@ def update_project_totals_on_fix_item_delete(sender, instance, **kwargs):
 def set_code(sender, instance, **kwargs):
     if instance._state.adding:
         branch = Branch.objects.get(id=instance.branch_id)
-
-        instance.code = branch.next_follow_up_code
         max_code = Project.objects.filter(branch=branch).aggregate(Max("code"))["code__max"]
+
         if max_code is not None:
-            branch.next_follow_up_code = max_code + 2
+            instance.code = max_code + 1
         else:
-            branch.next_follow_up_code += 1
+            instance.code = branch.next_follow_up_code
+
+        branch.next_follow_up_code = instance.code + 1
         branch.save()
