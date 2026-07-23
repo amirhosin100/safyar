@@ -59,10 +59,8 @@ class UserRegisterSerializer(serializers.Serializer):
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
-    #TODO change this to read_only
     active_branch = serializers.PrimaryKeyRelatedField(
-        queryset=Branch.objects.all(),
-        required=True
+        read_only=True
     )
 
     class Meta:
@@ -104,17 +102,18 @@ class UserCreationSerializer(UserDetailSerializer):
         return password
 
     def create(self, validated_data):
+        branch_pks = [branch.pk for branch in validated_data["allowed_branches"]]
+
         user = User(
             full_name=validated_data["full_name"],
-            active_branch=validated_data["active_branch"],
             national_code=validated_data["national_code"],
             phone_number=validated_data["phone_number"],
             user_type=validated_data["user_type"],
+            active_branch_id=branch_pks[0]
         )
         user.set_password(validated_data["password"])
         user.save()
 
-        branch_pks = [branch.pk for branch in validated_data["allowed_branches"]]
         user.allowed_branches.set(branch_pks)
 
         return user

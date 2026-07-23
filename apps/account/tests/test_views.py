@@ -452,13 +452,23 @@ class TestCreateUser:
 
         api_client.force_authenticate(user=owner_user)
         data = self.create_data(owner_user.active_branch)
+        data["allowed_branches"].clear()
         data["allowed_branches"].append(branch.id)
-        data["active_branch"] = branch.id
 
         response = api_client.post(self.url, data)
         assert response.status_code == status.HTTP_201_CREATED
-        assert User.objects.get(pk=response.data["id"]).allowed_branches.count() == 2
+        assert User.objects.get(pk=response.data["id"]).allowed_branches.count() == 1
         assert User.objects.get(pk=response.data["id"]).active_branch == branch
+
+    def test_without_allowed_branches(self,api_client,owner_user):
+        api_client.force_authenticate(user=owner_user)
+        data = self.create_data(owner_user.active_branch)
+        data["allowed_branches"].clear()
+
+        response = api_client.post(self.url, data)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert  "allowed_branches" in response.data
+
 
     def test_users(self, api_client, owner_user, super_user):
         for user, count, status_code in ((owner_user, 0, 403), (super_user, 1, 201)):

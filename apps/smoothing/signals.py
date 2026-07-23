@@ -31,7 +31,6 @@ def update_allowed_branches_of_user(sender, instance, **kwargs):
 
 @receiver(pre_save, sender=Branch)
 def check_codes(sender, instance, **kwargs):
-    # TODO write tests for these
     if (
             instance.pk and hasattr(instance, "_pre_next_follow_up_code") and
             instance.next_follow_up_code != instance._pre_next_follow_up_code

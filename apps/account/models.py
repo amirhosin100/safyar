@@ -83,6 +83,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         "smoothing.Branch",
         verbose_name=_("Allowed branches"),
         related_name="users",
+        blank=False
     )
     active_branch = models.ForeignKey(
         "smoothing.Branch",
